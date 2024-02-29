@@ -1,11 +1,12 @@
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QMainWindow, QWidget, QSlider, QMenu, QVBoxLayout, QFileDialog, QProgressDialog
-from PyQt6.QtGui import QAction
+from PyQt6.QtWidgets import QMainWindow, QWidget, QSlider, QMenu, QVBoxLayout, QFileDialog, QProgressDialog,QLabel
+from PyQt6.QtGui import QAction,QPixmap
 import cv2
 from ultralytics import YOLO
 import pandas as pd
 
 from imagewidget import ImageWidget
+from persontimeline import PersonTimeline
 
 
 class MainWindow(QMainWindow):
@@ -29,6 +30,7 @@ class MainWindow(QMainWindow):
 
         self.image_widget = ImageWidget()
         self.time_slider = QSlider(Qt.Orientation.Horizontal, self)
+        self.personTimeline = PersonTimeline()
 
 
         self.time_slider.valueChanged.connect(self.image_widget.set_frame)
@@ -39,8 +41,10 @@ class MainWindow(QMainWindow):
 
         main_layout.addWidget(self.image_widget)
         main_layout.addWidget(self.time_slider)
+        main_layout.addWidget(self.personTimeline)
 
         cw.setLayout(main_layout)
+        
         self.setCentralWidget(cw)
 
         self.labels = None
@@ -51,7 +55,7 @@ class MainWindow(QMainWindow):
         video = cv2.VideoCapture(video_path[0])
         frames_count = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
         print(f"Frames count: {frames_count}")
-        self.time_slider.setMaximum(frames_count)
+        self.time_slider.setMaximum(frames_count-1)
         progress = QProgressDialog("Tracking", "Cancel", 0, frames_count)
         progress.setWindowModality(Qt.WindowModality.WindowModal)
 
@@ -65,7 +69,7 @@ class MainWindow(QMainWindow):
             if not ret:
                 progress.cancel()
                 break
-
+            
             res = model.track(frame, persist=True)
 
             if res[0].boxes.id is not None:  # Add this check
@@ -107,7 +111,7 @@ class MainWindow(QMainWindow):
         video = cv2.VideoCapture(video_path[0])
         frames_count = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
         print(f"Frames count: {frames_count}")
-        self.time_slider.setMaximum(frames_count)
+        self.time_slider.setMaximum(frames_count-1)
         video.release()
 
         df = pd.read_csv(labels_path[0])
