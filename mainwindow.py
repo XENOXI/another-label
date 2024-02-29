@@ -34,6 +34,7 @@ class MainWindow(QMainWindow):
 
 
         self.time_slider.valueChanged.connect(self.image_widget.set_frame)
+        self.image_widget.frame_selected.connect(self.test_cb)
 
         cw = QWidget(self)
 
@@ -120,5 +121,10 @@ class MainWindow(QMainWindow):
 
     def export_labels_cb(self):
         labels_path = QFileDialog.getSaveFileName(self, "Save csv", None, "*.csv")[0]
+        if labels_path == '':
+            return
         self.labels.to_csv(labels_path, index=False)
+
+    def test_cb(self, id):
+        print(id)
         
