@@ -101,7 +101,9 @@ class MainWindow(QMainWindow):
         video.release()
         self.labels = pd.DataFrame(labels_dict)
         self.image_widget.set_labels(self.labels)
+        self.personTimeline.set_labels(self.labels)
         self.image_widget.set_video(video_path[0])
+        self.personTimeline.set_frame_cnt(frames_count)
         
         print("done")
 
@@ -118,6 +120,8 @@ class MainWindow(QMainWindow):
         df = pd.read_csv(labels_path[0])
         self.image_widget.set_video(video_path[0])
         self.image_widget.set_labels(df)
+        self.personTimeline.set_labels(self.labels)
+        self.personTimeline.set_frame_cnt(frames_count)
 
     def export_labels_cb(self):
         labels_path = QFileDialog.getSaveFileName(self, "Save csv", None, "*.csv")[0]
