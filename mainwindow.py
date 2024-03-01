@@ -53,6 +53,9 @@ class MainWindow(QMainWindow):
 
     def open_video_cb(self):
         video_path = QFileDialog.getOpenFileName(self, "open video")
+        if video_path[0] == "":
+            return
+        
         model = YOLO("yolov8m.pt")
         video = cv2.VideoCapture(video_path[0])
         frames_count = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -111,6 +114,9 @@ class MainWindow(QMainWindow):
     def import_labels_cb(self):
         video_path = QFileDialog.getOpenFileName(self, "Open video")
         labels_path = QFileDialog.getOpenFileName(self, "Import labels")
+
+        if video_path[0] == '' or labels_path[0] == '':
+            return
         
         video = cv2.VideoCapture(video_path[0])
         frames_count = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -121,7 +127,7 @@ class MainWindow(QMainWindow):
         df = pd.read_csv(labels_path[0])
         self.image_widget.set_video(video_path[0])
         self.image_widget.set_labels(df)
-        self.personTimeline.set_labels(self.labels)
+        self.personTimeline.set_labels(df)
         self.personTimeline.set_frame_cnt(frames_count)
 
     def export_labels_cb(self):
