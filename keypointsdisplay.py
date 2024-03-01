@@ -1,9 +1,10 @@
-from PyQt6.QtCore import QSize,QRect,Qt,QPoint
+from PyQt6.QtCore import QSize,QRect,Qt,QPoint, pyqtSignal
 from PyQt6.QtGui import QPaintEvent, QPainter,QColor,QBrush,QShortcut,QKeyEvent,QLinearGradient,QMouseEvent
 from PyQt6.QtWidgets import QWidget
 import pandas as pd
+import numpy as np
 
-class PersonTimeline(QWidget):
+class KeypointsDisplay(QWidget):
     def __init__(self):
         super().__init__()
         # SETTINGS
@@ -16,7 +17,7 @@ class PersonTimeline(QWidget):
         self.labels = None
         self.frame_cnt = 0
         self.bbox_cnt = 10
-        self.unique_bbox = 0
+        self.unique_bbox = np.empty(0)
         self.sequences = []
         self.selected_bbox = 0
         

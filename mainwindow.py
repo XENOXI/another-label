@@ -1,12 +1,61 @@
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QMainWindow, QWidget, QSlider, QMenu, QVBoxLayout, QFileDialog, QProgressDialog,QLabel
+from PyQt6.QtWidgets import QMainWindow, QWidget, QSlider, QMenu, QVBoxLayout, QFileDialog, QProgressDialog,QSplitter, QScrollArea
 from PyQt6.QtGui import QAction,QPixmap
 import cv2
 from ultralytics import YOLO
 import pandas as pd
 
 from imagewidget import ImageWidget
-from persontimeline import PersonTimeline
+from timeline import TimelineWidget
+
+def detectLabels(videoPath):
+    model = YOLO("yolov8m.pt")
+    video = cv2.VideoCapture(videoPath)
+    framesCount = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
+    print(f"Frames count: {framesCount}")
+    progress = QProgressDialog("Tracking", "Cancel", 0, framesCount)
+    progress.setWindowModality(Qt.WindowModality.WindowModal)
+
+    labelsDict = {"frame": [], "track_id": [], "x": [], "y": [], "h": [], "w": [], "label": []}
+
+    for i in range(framesCount):
+        progress.setValue(i)
+        if progress.wasCanceled():
+            break
+        ret, frame = video.read()
+        if not ret:
+            progress.cancel()
+            break
+        
+        res = model.track(frame, persist=True)
+
+        if res[0].boxes.id is not None:  # Add this check
+            cls = res[0].boxes.cls.int().cpu().tolist()
+            boxes = res[0].boxes.xywh.cpu()
+            track_ids = res[0].boxes.id.int().cpu().tolist()
+        else:
+            cls = []
+            boxes = []
+            track_ids = []
+
+        for cl, box, track_id in zip(cls, boxes, track_ids):
+            if cl != 0:
+                continue
+
+            x, y, w, h = box
+
+            labelsDict['frame'].append(i)
+            labelsDict['track_id'].append(track_id)
+            labelsDict['x'].append(x.item())
+            labelsDict['y'].append(y.item())
+            labelsDict['w'].append(w.item())
+            labelsDict['h'].append(h.item())
+            labelsDict['label'].append(0)
+    else:
+        progress.setValue(framesCount)
+    
+    video.release()
+    return (framesCount, labelsDict)
 
 
 class MainWindow(QMainWindow):
@@ -14,128 +63,77 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("Labeler")
 
-        menu_bar = self.menuBar()
-        file_menu = QMenu("File", self)
-        menu_bar.addMenu(file_menu)
+        menuBar = self.menuBar()
+        fileMenu = QMenu("File", self)
+        menuBar.addMenu(fileMenu)
 
-        open_video = QAction("Open video and calculate labels", self)
-        import_labels = QAction("Open video and import labels", self)
-        export_labels = QAction("Export labels to csv", self)
+        openVideo = QAction("Open video and calculate labels", self)
+        importLabels = QAction("Open video and import labels", self)
+        exportLabels = QAction("Export labels to csv", self)
 
-        open_video.triggered.connect(self.open_video_cb)
-        import_labels.triggered.connect(self.import_labels_cb)
-        export_labels.triggered.connect(self.export_labels_cb)
+        openVideo.triggered.connect(self.openVideoCB)
+        importLabels.triggered.connect(self.importLabelsCb)
+        exportLabels.triggered.connect(self.exportLabelsCb)
 
-        file_menu.addActions([open_video, import_labels, export_labels])
+        fileMenu.addActions([openVideo, importLabels, exportLabels])
 
-        self.image_widget = ImageWidget()
-        self.time_slider = QSlider(Qt.Orientation.Horizontal, self)
-        self.personTimeline = PersonTimeline()
+        self.imageWidget = ImageWidget()
+        self.timelineWidget = TimelineWidget()
 
 
-        self.time_slider.valueChanged.connect(self.image_widget.set_frame)
-        self.time_slider.valueChanged.connect(self.personTimeline.set_frame)
-        self.image_widget.frame_selected.connect(self.test_cb)
+        self.timelineWidget.frameSelected.connect(self.imageWidget.setFrame)
 
         cw = QWidget(self)
 
         main_layout = QVBoxLayout()
 
-        main_layout.addWidget(self.image_widget)
-        main_layout.addWidget(self.time_slider)
-        main_layout.addWidget(self.personTimeline)
+        main_splitter = QSplitter(Qt.Orientation.Vertical)
+        main_splitter.addWidget(self.imageWidget)
+        main_splitter.addWidget(self.timelineWidget)
+
+        main_layout.addWidget(main_splitter)
 
         cw.setLayout(main_layout)
-        
         self.setCentralWidget(cw)
 
         self.labels = None
 
-    def open_video_cb(self):
-        video_path = QFileDialog.getOpenFileName(self, "open video")
-        if video_path[0] == "":
+    def openVideoCB(self):
+        videoPath = QFileDialog.getOpenFileName(self, "Open video")
+        if videoPath[0] == "":
             return
         
-        model = YOLO("yolov8m.pt")
-        video = cv2.VideoCapture(video_path[0])
-        frames_count = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
-        print(f"Frames count: {frames_count}")
-        self.time_slider.setMaximum(frames_count-1)
-        progress = QProgressDialog("Tracking", "Cancel", 0, frames_count)
-        progress.setWindowModality(Qt.WindowModality.WindowModal)
-
-        labels_dict = {"frame": [], "track_id": [], "x": [], "y": [], "h": [], "w": [], "label": []}
-
-        for i in range(frames_count):
-            progress.setValue(i)
-            if progress.wasCanceled():
-                break
-            ret, frame = video.read()
-            if not ret:
-                progress.cancel()
-                break
-            
-            res = model.track(frame, persist=True)
-
-            if res[0].boxes.id is not None:  # Add this check
-                cls = res[0].boxes.cls.int().cpu().tolist()
-                boxes = res[0].boxes.xywh.cpu()
-                track_ids = res[0].boxes.id.int().cpu().tolist()
-            else:
-                cls = []
-                boxes = []
-                track_ids = []
-
-            for cl, box, track_id in zip(cls, boxes, track_ids):
-                if cl != 0:
-                    continue
-
-                x, y, w, h = box
-
-                labels_dict['frame'].append(i)
-                labels_dict['track_id'].append(track_id)
-                labels_dict['x'].append(x.item())
-                labels_dict['y'].append(y.item())
-                labels_dict['w'].append(w.item())
-                labels_dict['h'].append(h.item())
-                labels_dict['label'].append(0)
-        else:
-            progress.setValue(frames_count)
+        framesCount, labelsDict = detectLabels(videoPath[0])
         
-        video.release()
-        self.labels = pd.DataFrame(labels_dict)
-        self.image_widget.set_labels(self.labels)
-        self.personTimeline.set_labels(self.labels)
-        self.image_widget.set_video(video_path[0])
-        self.personTimeline.set_frame_cnt(frames_count)
+        self.labels = pd.DataFrame(labelsDict)
+        self.imageWidget.setLabels(self.labels)
+        self.timelineWidget.setLabels(self.labels)
+        self.imageWidget.setVideo(videoPath[0])
+        self.timelineWidget.setFramesCount(framesCount)
         
         print("done")
 
-    def import_labels_cb(self):
-        video_path = QFileDialog.getOpenFileName(self, "Open video")
-        labels_path = QFileDialog.getOpenFileName(self, "Import labels")
+    def importLabelsCb(self):
+        videoPath = QFileDialog.getOpenFileName(self, "Open video")
+        labelsPath = QFileDialog.getOpenFileName(self, "Import labels")
 
-        if video_path[0] == '' or labels_path[0] == '':
+        if videoPath[0] == '' or labelsPath[0] == '':
             return
         
-        video = cv2.VideoCapture(video_path[0])
-        frames_count = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
-        print(f"Frames count: {frames_count}")
-        self.time_slider.setMaximum(frames_count-1)
+        video = cv2.VideoCapture(videoPath[0])
+        framesCount = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
+        print(f"Frames count: {framesCount}")
         video.release()
 
-        df = pd.read_csv(labels_path[0])
-        self.image_widget.set_video(video_path[0])
-        self.image_widget.set_labels(df)
-        self.personTimeline.set_labels(df)
-        self.personTimeline.set_frame_cnt(frames_count)
+        df = pd.read_csv(labelsPath[0])
+        self.imageWidget.setVideo(videoPath[0])
+        self.imageWidget.setLabels(df)
+        self.timelineWidget.setLabels(df)
+        self.timelineWidget.setFramesCount(framesCount)
 
-    def export_labels_cb(self):
+    def exportLabelsCb(self):
         labels_path = QFileDialog.getSaveFileName(self, "Save csv", None, "*.csv")[0]
         if labels_path == '':
             return
         self.labels.to_csv(labels_path, index=False)
-
-    def test_cb(self, id):
-        print(id)
         
