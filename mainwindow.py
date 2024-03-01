@@ -34,6 +34,8 @@ class MainWindow(QMainWindow):
 
 
         self.time_slider.valueChanged.connect(self.image_widget.set_frame)
+        self.time_slider.valueChanged.connect(self.personTimeline.set_frame)
+        self.image_widget.frame_selected.connect(self.test_cb)
 
         cw = QWidget(self)
 
@@ -100,7 +102,9 @@ class MainWindow(QMainWindow):
         video.release()
         self.labels = pd.DataFrame(labels_dict)
         self.image_widget.set_labels(self.labels)
+        self.personTimeline.set_labels(self.labels)
         self.image_widget.set_video(video_path[0])
+        self.personTimeline.set_frame_cnt(frames_count)
         
         print("done")
 
@@ -117,8 +121,15 @@ class MainWindow(QMainWindow):
         df = pd.read_csv(labels_path[0])
         self.image_widget.set_video(video_path[0])
         self.image_widget.set_labels(df)
+        self.personTimeline.set_labels(self.labels)
+        self.personTimeline.set_frame_cnt(frames_count)
 
     def export_labels_cb(self):
         labels_path = QFileDialog.getSaveFileName(self, "Save csv", None, "*.csv")[0]
+        if labels_path == '':
+            return
         self.labels.to_csv(labels_path, index=False)
+
+    def test_cb(self, id):
+        print(id)
         
