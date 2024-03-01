@@ -1,14 +1,56 @@
-from PyQt6.QtCore import QSize
-from PyQt6.QtGui import QPaintEvent, QPainter
+from PyQt6.QtCore import QSize,QRect,Qt
+from PyQt6.QtGui import QPaintEvent, QPainter,QColor,QBrush
 from PyQt6.QtWidgets import QWidget
+import pandas as pd
 
 class PersonTimeline(QWidget):
     def __init__(self):
         super().__init__()
+        # SETTINGS
+        self.frame_box_size = 20
+        self.frame_rhomb_size = 10
+        self.connection_heigth = 4
+
+
+        self.frame = 0
+        self.labels = None
+        self.frame_cnt = 0
+        self.bbox_cnt = 10
+        
+
 
     def paintEvent(self, a0: QPaintEvent | None) -> None:
         painter = QPainter(self)
-        painter.drawRect(10, 10, 20, 20)
+
+
+        for i in range(0,self.frame_cnt):
+            painter.drawRect((i-self.frame)*self.frame_box_size, 10, self.frame_box_size, 100)
+
+        brush = QBrush(Qt.GlobalColor.magenta,Qt.BrushStyle.SolidPattern)
+        painter.setBrush(brush)
+        painter.translate(self.frame_box_size/2-self.frame*self.frame_box_size,5+self.frame_box_size//2)
+
+        
+        for i in range(0,100):
+            painter.fillRect(0, (self.frame_rhomb_size)//2, self.frame_rhomb_size*2,self.connection_heigth,QBrush(QColor(200,0,200)))
+            painter.rotate(45)
+            painter.drawRect(0, 0, self.frame_rhomb_size, self.frame_rhomb_size)
+            painter.rotate(-45)
+            painter.translate(self.frame_box_size,0)
+
+
+
+    def set_frame(self,frame):
+        self.frame = frame
+        self.repaint()
+
+    def set_frame_cnt(self,frame_cnt):
+        self.frame_cnt = frame_cnt
+        self.repaint()
+    
+    def set_labels(self, labels:pd.DataFrame):
+        self.labels = labels    
+        self.unique_bbox = pd.unique(labels["track_id"])
 
     def sizeHint(self) -> QSize:
-        return QSize(100, 100)
+        return QSize(1000, self.bbox_cnt*self.frame_box_size+20)
