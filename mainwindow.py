@@ -34,6 +34,7 @@ class MainWindow(QMainWindow):
 
 
         self.time_slider.valueChanged.connect(self.image_widget.set_frame)
+        self.time_slider.valueChanged.connect(self.personTimeline.set_frame)
         self.image_widget.frame_selected.connect(self.test_cb)
 
         cw = QWidget(self)
