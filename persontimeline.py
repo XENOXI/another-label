@@ -1,5 +1,5 @@
 from PyQt6.QtCore import QSize,QRect,Qt,QPoint
-from PyQt6.QtGui import QPaintEvent, QPainter,QColor,QBrush,QShortcut,QKeyEvent,QLinearGradient
+from PyQt6.QtGui import QPaintEvent, QPainter,QColor,QBrush,QShortcut,QKeyEvent,QLinearGradient,QMouseEvent
 from PyQt6.QtWidgets import QWidget
 import pandas as pd
 
@@ -18,56 +18,61 @@ class PersonTimeline(QWidget):
         self.bbox_cnt = 10
         self.unique_bbox = 0
         self.sequences = []
+        self.selected_bbox = 0
+        
 
         self.labels_color = [Qt.GlobalColor.magenta,Qt.GlobalColor.blue]
-        
+        self.selected_colors = [QColor(0,134,110),QColor(0,143,103)]
 
 
     def paintEvent(self, a0: QPaintEvent | None) -> None:
         painter = QPainter(self)
 
+        
+        
 
         for i in range(0,self.frame_cnt):
             painter.drawRect((i-self.frame)*self.frame_box_size, 10, self.frame_box_size, self.frame_box_size*self.unique_bbox.shape[0])
+
+        brush = QBrush(self.selected_colors[0],Qt.BrushStyle.SolidPattern)
+        painter.setBrush(brush)
+
+        painter.drawRect(0, 10, self.frame_box_size, self.frame_box_size*self.unique_bbox.shape[0])
+
+        brush = QBrush(self.selected_colors[1],Qt.BrushStyle.SolidPattern)
+        painter.setBrush(brush)
         
+        painter.drawRect(-self.frame*self.frame_box_size, 10+self.frame_box_size*self.selected_bbox, self.frame_box_size*self.frame_cnt, self.frame_box_size)
+
         grad = QLinearGradient(0,0,self.frame_box_size,0)
         brush = QBrush(Qt.GlobalColor.black,Qt.BrushStyle.SolidPattern)
-        Qt.BrushStyle.LinearGradientPattern
         painter.setBrush(brush)
-        painter.translate(self.frame_box_size/2-self.frame*self.frame_box_size,5+self.frame_box_size//2)
+        painter.translate(self.frame_box_size/2-self.frame*self.frame_box_size,3+self.frame_box_size//2)
 
         
         for seq in self.sequences: 
-            # f_df = seq.iloc[0]
-            
-            # brush.setColor(self.labels_color[int(f_df["label"])])
-            # painter.setBrush(brush)
-
-            # last_frame = int(f_df["frame"])
-            # painter.translate(self.frame_box_size*last_frame,0) 
-            # painter.rotate(45)
-            # painter.drawRect(0, 0, self.frame_rhomb_size, self.frame_rhomb_size)
-            # painter.rotate(-45)
             last_frame = int(seq.iloc[0]["frame"])
-            last_label = int(seq.iloc[0]["label"])
+            last_cl = self.labels_color[int(seq.iloc[0]["label"])]
             painter.translate(self.frame_box_size*last_frame,0) 
             seq = seq[1:].iloc
             for dataframe in seq:
-                label = int(dataframe["label"])
+                cl = self.labels_color[int(dataframe["label"])]
                 frame = int(dataframe["frame"])  
-                grad.setColorAt(0.0,self.labels_color[last_label])
-                grad.setColorAt(1.0,self.labels_color[label])
-                painter.setBrush(grad)
-                painter.fillRect(0, (self.frame_rhomb_size)//2, self.frame_box_size*(frame-last_frame),self.connection_heigth,QBrush(QColor(200,0,200)))
-                
-                             
-                brush.setColor(self.labels_color[int(dataframe["label"])])
+                grad.setColorAt(0.0,last_cl)
+                grad.setColorAt(1.0,cl)
+
+                painter.fillRect(0, (self.frame_rhomb_size)//2, self.frame_box_size*(frame-last_frame),self.connection_heigth,grad)
+                  
+                brush.setColor(last_cl)
                 painter.setBrush(brush)
                 painter.rotate(45)
                 painter.drawRect(0, 0, self.frame_rhomb_size, self.frame_rhomb_size)
                 painter.rotate(-45)
                 painter.translate(self.frame_box_size*(frame-last_frame),0) 
                 last_frame = frame
+                last_cl = cl
+            brush.setColor(last_cl)
+            painter.setBrush(brush)
             painter.rotate(45)
             painter.drawRect(0, 0, self.frame_rhomb_size, self.frame_rhomb_size)
             painter.rotate(-45)
@@ -91,4 +96,19 @@ class PersonTimeline(QWidget):
             self.sequences.append(labels[labels["track_id"]==i].copy().sort_values(by="frame",ascending=True))
 
     def sizeHint(self) -> QSize:
-        return QSize(1000, self.unique_bbox.shape[0]*self.frame_box_size+20)
+        return QSize(1000,10*self.frame_box_size)
+    
+    def keyPressEvent(self, event):
+        print(self.keyevent_to_string(event))
+        
+
+        if self.keyevent_to_string(event) == "Control+Q":
+            self.close()
+    
+    def mousePressEvent(self, e: QMouseEvent) -> None:
+        if e.button() == Qt.MouseButton.LeftButton:
+            point = e.pos()
+            if point.y() > 10:
+                point.x()//self.frame_box_size
+                self.selected_bbox = (point.y()-10)//self.frame_box_size               
+                self.repaint()
