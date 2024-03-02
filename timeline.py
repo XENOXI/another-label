@@ -18,6 +18,8 @@ class TimelineWidget(QWidget):
 
         self.labelList = LabelList()
         keypointsDisplayScroll = QScrollArea(self)
+        keypointsDisplayScroll.setWidgetResizable(True)
+        keypointsDisplayScroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         keypointsDisplaySplitter = QSplitter(Qt.Orientation.Horizontal, self)
         self.keypointsDisplay = KeypointsDisplay()
 
