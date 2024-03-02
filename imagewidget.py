@@ -3,6 +3,7 @@ from PyQt6.QtGui import QMouseEvent, QPaintEvent, QImage, QPainter, QResizeEvent
 from PyQt6.QtWidgets import QWidget, QSizePolicy
 from PyQt6 import QtGui
 import cv2
+import numpy as np
 from pandas import Series
 
 class BBox:
@@ -49,12 +50,15 @@ class ImageWidget(QWidget):
         self.selectedId = None
         self.labels = None
         self.shape = None
+        self.resizedShape = None
         self.frame = None
         self.cap = None
+        self.widthOffset = 0
+        self.heightOffset = 0
 
         self.aspectRatio = 360/640
 
-        # self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
     def setLabels(self, labels):
         self.labels = labels        
@@ -64,7 +68,7 @@ class ImageWidget(QWidget):
         width  = self.cap.get(cv2.CAP_PROP_FRAME_WIDTH)   # float `width`
         height = self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT)  # float `height`
         self.shape = (height, width)
-        self.aspectRatio = width/height
+        self.aspectRatio = height/width
         self.frame = 0
 
     def setFrame(self, frame):
@@ -76,9 +80,9 @@ class ImageWidget(QWidget):
             pass
         if e.button() == Qt.MouseButton.RightButton:
             height, width = self.shape
-            x = e.pos().x() / self.width() * width
-            y = e.pos().y() / self.height() * height
-            print(x, y, self.width(), self.height(), width, height)
+            x = (e.pos().x() - self.widthOffset) / self.resizedShape[0] * width
+            y = (e.pos().y() - self.heightOffset) / self.resizedShape[1] * height
+            
             for r in self.labels[self.labels['frame'] == self.frame].iloc:
                 bbox = BBox(r)
                 lt = bbox.lt_corner()
@@ -90,8 +94,9 @@ class ImageWidget(QWidget):
                     print(f"Selected {self.selectedId}")
                     self.repaint()
                     return
-            self.repaint()
             self.selectedId = None
+            self.repaint()
+            
 
     def mouseReleaseEvent(self, a0: QMouseEvent | None) -> None:
         return super().mouseReleaseEvent(a0)
@@ -138,26 +143,25 @@ class ImageWidget(QWidget):
 
             bbox = BBox(r)
             image = cv2.rectangle(image, bbox.lt_corner(), bbox.rb_corner(), color, 2)
-        image = cv2.resize(image, (640, 360))
+        
+        if self.aspectRatio > self.height()/self.width():
+            newWidth = int(self.height()/self.aspectRatio)
+            self.resizedShape = (newWidth, self.height())
+            self.heightOffset = 0
+            self.widthOffset = (self.width() - newWidth)//2
+        else:
+            newHeight = int(self.aspectRatio*self.width())
+            self.resizedShape = (self.width(), newHeight)
+            self.heightOffset = (self.height() - newHeight)//2
+            self.widthOffset = 0
+
+        image = cv2.resize(image, self.resizedShape)
         height, width, _ = image.shape
         bytesPerLine = width*3
         size = QSize(width, height)
         qImg = QImage(image.data, width, height, bytesPerLine, QImage.Format.Format_BGR888)
-        painter.drawImage(QRect(QPoint(0, 0), size), qImg)
+        painter.drawImage(QRect(QPoint(self.widthOffset, self.heightOffset), size), qImg)
 
     def sizeHint(self) -> QSize:
         return QSize(640, 360)
     
-    def resizeEvent(self, a0: QResizeEvent | None) -> None:
-        w = self.width()
-        h = self.height()
-        aspect = h/w
-
-        if(aspect < self.aspectRatio):
-            targetWidth = int(h/self.aspectRatio)
-            self.setMaximumWidth(targetWidth)
-            self.setMaximumHeight(h)
-        else:
-            targetHeigth = int(w*self.aspectRatio)
-            self.setMaximumHeight(targetHeigth)
-            self.setMaximumWidth(w)
