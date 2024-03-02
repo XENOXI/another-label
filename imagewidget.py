@@ -54,6 +54,7 @@ class ImageWidget(QWidget):
         super().__init__()
         
         self.selectedId = None
+        self.selectedCorner = None
         self.labels = None
         self.shape = None
         self.resizedShape = None
@@ -92,7 +93,8 @@ class ImageWidget(QWidget):
         coords = self.getCoordsFromMouseEvent(e)
         if e.button() == Qt.MouseButton.LeftButton:
             self.lastMousePos = coords
-            print(coords)
+            if self.selectedId is not None:
+                self.setCursor(Qt.CursorShape.SizeAllCursor)
         if e.button() == Qt.MouseButton.RightButton:
             for r in self.labels[self.labels['frame'] == self.frame].iloc:
                 bbox = BBox(r)
@@ -108,6 +110,8 @@ class ImageWidget(QWidget):
             
 
     def mouseReleaseEvent(self, e: QMouseEvent | None) -> None:
+        self.setCursor(Qt.CursorShape.ArrowCursor)
+        self.selectedCorner = None
         if e.button() == Qt.MouseButton.LeftButton:
             self.lastMousePos = None
     
@@ -118,9 +122,32 @@ class ImageWidget(QWidget):
 
             data = self.labels[np.logical_and(self.labels['track_id'] == self.selectedId, self.labels['frame'] == self.frame)].iloc[0]
             bbox = BBox(data)
-            if(bbox.containsCoords(self.lastMousePos)):
-                self.labels.loc[np.logical_and(self.labels['track_id'] == self.selectedId, self.labels['frame'] == self.frame),'x'] = x
-                self.labels.loc[np.logical_and(self.labels['track_id'] == self.selectedId, self.labels['frame'] == self.frame),'y'] = y
+
+            last = np.array(self.lastMousePos)
+
+            if np.linalg.norm(np.array(bbox.rt_corner()) - last) <= 20 or self.selectedCorner == 0:
+                self.selectedCorner = 0
+                self.labels.loc[np.logical_and(self.labels['track_id'] == self.selectedId, self.labels['frame'] == self.frame),'w'] += x - lastX
+                self.labels.loc[np.logical_and(self.labels['track_id'] == self.selectedId, self.labels['frame'] == self.frame),'h'] -= y - lastY
+                self.repaint()
+            elif np.linalg.norm(np.array(bbox.lt_corner()) - last) <= 20 or self.selectedCorner == 1:
+                self.selectedCorner = 1
+                self.labels.loc[np.logical_and(self.labels['track_id'] == self.selectedId, self.labels['frame'] == self.frame),'w'] -= x - lastX
+                self.labels.loc[np.logical_and(self.labels['track_id'] == self.selectedId, self.labels['frame'] == self.frame),'h'] -= y - lastY
+                self.repaint()
+            elif np.linalg.norm(np.array(bbox.rb_corner()) - last) <= 20 or self.selectedCorner == 2:
+                self.selectedCorner = 2
+                self.labels.loc[np.logical_and(self.labels['track_id'] == self.selectedId, self.labels['frame'] == self.frame),'w'] += x - lastX
+                self.labels.loc[np.logical_and(self.labels['track_id'] == self.selectedId, self.labels['frame'] == self.frame),'h'] += y - lastY
+                self.repaint()
+            elif np.linalg.norm(np.array(bbox.lb_corner()) - last) <= 20 or self.selectedCorner == 3:
+                self.selectedCorner = 3
+                self.labels.loc[np.logical_and(self.labels['track_id'] == self.selectedId, self.labels['frame'] == self.frame),'w'] -= x - lastX
+                self.labels.loc[np.logical_and(self.labels['track_id'] == self.selectedId, self.labels['frame'] == self.frame),'h'] += y - lastY
+                self.repaint()
+            elif(bbox.containsCoords(self.lastMousePos)):
+                self.labels.loc[np.logical_and(self.labels['track_id'] == self.selectedId, self.labels['frame'] == self.frame),'x'] += x - lastX
+                self.labels.loc[np.logical_and(self.labels['track_id'] == self.selectedId, self.labels['frame'] == self.frame),'y'] += y - lastY
                 self.repaint()
             self.lastMousePos = (x, y)
 
