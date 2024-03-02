@@ -4,6 +4,7 @@ from PyQt6.QtWidgets import QWidget, QSizePolicy
 from PyQt6 import QtGui
 import cv2
 import numpy as np
+import pandas as pd
 from pandas import Series
 
 class BBox:
@@ -42,6 +43,11 @@ class BBox:
     def b_middle(self):
         return (int(self.r['x']), int(self.r['y'] + self.r['h']/2))
     
+    def containsCoords(self, coords):
+        lt = self.lt_corner()
+        rb = self.rb_corner()
+        return lt[0] <= coords[0] <= rb[0] and lt[1] <= coords[1] <= rb[1]
+    
 class ImageWidget(QWidget):
     frameSelected = pyqtSignal(int)
     def __init__(self) -> None:
@@ -53,6 +59,7 @@ class ImageWidget(QWidget):
         self.resizedShape = None
         self.frame = None
         self.cap = None
+        self.lastMousePos = None
         self.widthOffset = 0
         self.heightOffset = 0
 
@@ -74,21 +81,23 @@ class ImageWidget(QWidget):
     def setFrame(self, frame):
         self.frame = frame
         self.repaint()
+    
+    def getCoordsFromMouseEvent(self, e: QMouseEvent):
+        height, width = self.shape
+        x = int((e.pos().x() - self.widthOffset) / self.resizedShape[0] * width)
+        y = int((e.pos().y() - self.heightOffset) / self.resizedShape[1] * height)
+        return (x, y)
 
     def mousePressEvent(self, e: QMouseEvent) -> None:
+        coords = self.getCoordsFromMouseEvent(e)
         if e.button() == Qt.MouseButton.LeftButton:
-            pass
+            self.lastMousePos = coords
+            print(coords)
         if e.button() == Qt.MouseButton.RightButton:
-            height, width = self.shape
-            x = (e.pos().x() - self.widthOffset) / self.resizedShape[0] * width
-            y = (e.pos().y() - self.heightOffset) / self.resizedShape[1] * height
-            
             for r in self.labels[self.labels['frame'] == self.frame].iloc:
                 bbox = BBox(r)
-                lt = bbox.lt_corner()
-                rb = bbox.rb_corner()
 
-                if lt[0] <= x <= rb[0] and lt[1] <= y <= rb[1]:
+                if bbox.containsCoords(coords):
                     self.selectedId = int(r['track_id'])
                     self.frameSelected.emit(self.selectedId)
                     print(f"Selected {self.selectedId}")
@@ -98,14 +107,22 @@ class ImageWidget(QWidget):
             self.repaint()
             
 
-    def mouseReleaseEvent(self, a0: QMouseEvent | None) -> None:
-        return super().mouseReleaseEvent(a0)
+    def mouseReleaseEvent(self, e: QMouseEvent | None) -> None:
+        if e.button() == Qt.MouseButton.LeftButton:
+            self.lastMousePos = None
     
     def mouseMoveEvent(self, e: QMouseEvent | None) -> None:
-        if self.selectedId and e.button() == Qt.MouseButton.LeftButton:
-            height, width = self.shape
-            x = e.pos().x() / self.width() * width
-            y = e.pos().y() / self.height() * height
+        if self.selectedId is not None and self.lastMousePos is not None:
+            lastX, lastY = self.lastMousePos
+            x, y = self.getCoordsFromMouseEvent(e)
+
+            data = self.labels[np.logical_and(self.labels['track_id'] == self.selectedId, self.labels['frame'] == self.frame)].iloc[0]
+            bbox = BBox(data)
+            if(bbox.containsCoords(self.lastMousePos)):
+                self.labels.loc[np.logical_and(self.labels['track_id'] == self.selectedId, self.labels['frame'] == self.frame),'x'] = x
+                self.labels.loc[np.logical_and(self.labels['track_id'] == self.selectedId, self.labels['frame'] == self.frame),'y'] = y
+                self.repaint()
+            self.lastMousePos = (x, y)
 
 
             

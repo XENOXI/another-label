@@ -1,5 +1,5 @@
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QMainWindow, QWidget, QSlider, QMenu, QVBoxLayout, QFileDialog, QProgressDialog,QSplitter, QScrollArea
+from PyQt6.QtWidgets import QMainWindow, QWidget, QSlider, QMenu, QSizePolicy, QFileDialog, QProgressDialog,QSplitter, QScrollArea
 from PyQt6.QtGui import QAction,QPixmap
 import cv2
 from ultralytics import YOLO
@@ -83,18 +83,14 @@ class MainWindow(QMainWindow):
 
         self.timelineWidget.frameSelected.connect(self.imageWidget.setFrame)
 
-        cw = QWidget(self)
+        mainSplitter = QSplitter(Qt.Orientation.Vertical, self)
+        mainSplitter.setStretchFactor(0, 1)
+        mainSplitter.setStretchFactor(1, 0)
+        print(mainSplitter.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding))
+        mainSplitter.addWidget(self.imageWidget)
+        mainSplitter.addWidget(self.timelineWidget)
 
-        main_layout = QVBoxLayout()
-
-        main_splitter = QSplitter(Qt.Orientation.Vertical)
-        main_splitter.addWidget(self.imageWidget)
-        main_splitter.addWidget(self.timelineWidget)
-
-        main_layout.addWidget(main_splitter)
-
-        cw.setLayout(main_layout)
-        self.setCentralWidget(cw)
+        self.setCentralWidget(mainSplitter)
 
         self.labels = None
 
