@@ -153,7 +153,7 @@ class KeypointsDisplay(QWidget):
     def mousePressEvent(self, e: QMouseEvent) -> None:
         if e.button() == Qt.MouseButton.LeftButton:
             point = e.pos()
-            if point.y() > 10:
+            if point.y() > 10 and point.y()<10 + self.frame_box_size*self.unique_bbox.shape[0]:
                 point.x()//self.frame_box_size
                 self.selected_bbox = (point.y()-10)//self.frame_box_size   
                 self.selectedBboxUpdate.emit(self.selected_bbox)            
