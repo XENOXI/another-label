@@ -5,6 +5,8 @@ import pandas as pd
 import numpy as np
 
 class KeypointsDisplay(QWidget):
+    boxCountUpdated = pyqtSignal(int, int)
+    selectedFrameUpdated = pyqtSignal(int)
     def __init__(self):
         super().__init__()
         # SETTINGS
@@ -13,7 +15,7 @@ class KeypointsDisplay(QWidget):
         self.connection_heigth = 4
 
 
-        self.frame_selected = 0
+        self.selected_frame = 0
         self.labels = None
         self.frame_cnt = 0
         self.bbox_cnt = 10
@@ -33,86 +35,98 @@ class KeypointsDisplay(QWidget):
     def paintEvent(self, a0: QPaintEvent | None) -> None:
         painter = QPainter(self)
 
-        self.width_per_box = self.width()//self.frame_box_size
+        self.width_per_box = self.width()//self.frame_box_size-1
 
-        self.middle_frame_to_render = self.first_frame_to_render + self.width_per_box // 2
-
-        if self.frame_selected >= self.width_per_box//2 and self.frame_selected < self.frame_cnt - self.width_per_box//2:
-            self.first_frame_to_render =  self.frame_selected - self.width_per_box//2
-        
-        print(self.width())
-    
 
         self.last_frame_to_render = self.width_per_box + self.first_frame_to_render
 
-        for i in range(0,self.width()//self.frame_box_size+1):
+        if self.selected_frame >= self.last_frame_to_render:
+            self.last_frame_to_render = self.selected_frame+1
+            self.first_frame_to_render = self.last_frame_to_render-self.width_per_box
+        elif self.selected_frame < self.first_frame_to_render:
+            self.first_frame_to_render = self.selected_frame
+            self.last_frame_to_render = self.first_frame_to_render + self.width_per_box
+
+        
+
+        
+
+        for i in range(0,self.width_per_box):
             painter.drawRect(i*self.frame_box_size, 10, self.frame_box_size, self.frame_box_size*self.unique_bbox.shape[0])
+
+        
 
         brush = QBrush(self.selected_colors[0],Qt.BrushStyle.SolidPattern)
         painter.setBrush(brush)
 
-        painter.drawRect(self.frame_box_size*(self.frame_selected-self.first_frame_to_render), 10, self.frame_box_size, self.frame_box_size*self.unique_bbox.shape[0])
+        painter.drawRect(self.frame_box_size*(self.selected_frame-self.first_frame_to_render), 10, self.frame_box_size, self.frame_box_size*self.unique_bbox.shape[0])
 
         brush = QBrush(self.selected_colors[1],Qt.BrushStyle.SolidPattern)
         painter.setBrush(brush)
         
-        painter.drawRect(0, 10+self.frame_box_size*self.selected_bbox, self.width(), self.frame_box_size)
+        painter.drawRect(0, 10+self.frame_box_size*self.selected_bbox, self.width_per_box * self.frame_box_size , self.frame_box_size)
 
         grad = QLinearGradient(0,0,self.frame_box_size,0)
         brush = QBrush(Qt.GlobalColor.black,Qt.BrushStyle.SolidPattern)
         painter.setBrush(brush)
         painter.translate(self.frame_box_size/2,3+self.frame_box_size//2)
         
-        
-        for seq in self.sequences:
-            last_frame = int(seq.iloc[0]["frame"])           
-            if last_frame > self.last_frame_to_render or seq.iloc[-1]["frame"] < self.first_frame_to_render:
+        for seq in self.sequences:  
+            classes = seq["label"].to_numpy()
+            frames = seq["frame"].to_numpy()
+ 
+            if int(frames[0]) > self.last_frame_to_render or int(frames[frames.shape[0]-1]) < self.first_frame_to_render:
+                painter.translate(0,self.frame_box_size)
                 continue
-            last_cl = self.labels_color[int(seq.iloc[0]["label"])]
-            i = 0
-            while frame < self.first_frame_to_render:
-                dataframe = seq[i]
-                last_cl = self.labels_color[int(dataframe["label"])]
-                last_frame = int(dataframe["frame"])
-                i+=1
-                
             
-            seq = seq[1:].iloc
-            for dataframe in seq:
-                cl = self.labels_color[int(dataframe["label"])]
-                frame = int(dataframe["frame"])
-                if frame > self.last_frame_to_render or frame < self.first_frame_to_render: 
-                    painter.translate(self.frame_box_size*(frame-last_frame),0) 
-                    last_frame = frame
-                    last_cl = cl
-                    if frame > self.last_frame_to_render:
-                        break
-                    continue
+            i = 0
+            if seq.shape[0] == 1:
+                painter.translate(self.frame_box_size*(frames[i]-self.first_frame_to_render),0) 
+            
+            
+
+
+
+            while int(frames[i+1]) < self.first_frame_to_render:
+                i+=1
+            
+            last_cl = self.labels_color[int(classes[i])]
+
+            painter.translate(self.frame_box_size*(frames[i]-self.first_frame_to_render),0) 
+           
+
+            while i + 1 < frames.shape[0] and int(frames[i]) <= self.last_frame_to_render-1:
+                cl = self.labels_color[int(classes[i+1])]
                 grad.setColorAt(0.0,last_cl)
                 grad.setColorAt(1.0,cl)
-                painter.fillRect(0, (self.frame_rhomb_size)//2, self.frame_box_size*(frame-last_frame),self.connection_heigth,grad)
+                painter.fillRect(0, (self.frame_rhomb_size)//2, self.frame_box_size*(frames[i+1]-frames[i]),self.connection_heigth,grad)
 
                 brush.setColor(last_cl)
                 painter.setBrush(brush)
                 painter.rotate(45)
                 painter.drawRect(0, 0, self.frame_rhomb_size, self.frame_rhomb_size)
                 painter.rotate(-45)
-                painter.translate(self.frame_box_size*(frame-last_frame),0)
-                last_frame = frame
+                painter.translate(self.frame_box_size*(frames[i+1]-frames[i]),0)
                 last_cl = cl
+                i+=1
+            
+
             brush.setColor(last_cl)
             painter.setBrush(brush)
             painter.rotate(45)
             painter.drawRect(0, 0, self.frame_rhomb_size, self.frame_rhomb_size)
             painter.rotate(-45)
-            painter.translate(-self.frame_box_size*last_frame,self.frame_box_size)
+                
+            painter.translate(self.frame_box_size*(self.first_frame_to_render - frames[i]),self.frame_box_size)
+
+        painter.fillRect(self.width_per_box*self.frame_box_size-self.frame_box_size//2 + 1, -self.unique_bbox.shape[0]*self.frame_box_size-3, self.frame_box_size, self.frame_box_size*self.unique_bbox.shape[0],self.palette().color(self.backgroundRole()))
         painter.end()
 
     
 
 
     def set_frame(self,frame):
-        self.frame_selected = frame
+        self.selected_frame = frame
         self.repaint()
 
     def set_frame_cnt(self,frame_cnt):
@@ -120,7 +134,9 @@ class KeypointsDisplay(QWidget):
         self.repaint()
     
     def set_labels(self, labels:pd.DataFrame):
+        
         self.unique_bbox = pd.unique(labels["track_id"])
+        self.boxCountUpdated.emit(self.unique_bbox.shape[0],self.frame_box_size)
         for i in self.unique_bbox:
             self.sequences.append(labels[labels["track_id"]==i].copy().sort_values(by="frame",ascending=True))
 
@@ -139,5 +155,6 @@ class KeypointsDisplay(QWidget):
             point = e.pos()
             if point.y() > 10:
                 point.x()//self.frame_box_size
-                self.selected_bbox = (point.y()-10)//self.frame_box_size               
+                self.selected_bbox = (point.y()-10)//self.frame_box_size   
+                self.selectedFrameUpdated.emit(self.selected_bbox)            
                 self.repaint()
