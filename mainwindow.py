@@ -1,6 +1,6 @@
-from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QMainWindow, QWidget, QSlider, QMenu, QSizePolicy, QFileDialog, QProgressDialog,QSplitter, QScrollArea
-from PyQt6.QtGui import QAction,QPixmap
+from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtWidgets import QMainWindow, QSlider, QMenu, QSizePolicy, QFileDialog, QProgressDialog,QSplitter, QScrollArea
+from PyQt6.QtGui import QAction, QKeyEvent,QPixmap
 import cv2
 from ultralytics import YOLO
 import pandas as pd
@@ -59,6 +59,8 @@ def detectLabels(videoPath):
 
 
 class MainWindow(QMainWindow):
+    keyPressed = pyqtSignal(int)
+    keyReleased = pyqtSignal(int)
     def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle("Labeler")
@@ -132,4 +134,10 @@ class MainWindow(QMainWindow):
         if labels_path == '':
             return
         self.labels.to_csv(labels_path, index=False)
+
+    def keyPressEvent(self, e: QKeyEvent | None) -> None:
+        self.keyPressed.emit(e.key())
+    
+    def keyReleaseEvent(self, e: QKeyEvent | None) -> None:
+        self.keyReleased.emit(e.key())
         
