@@ -50,6 +50,7 @@ class BBox:
     
 class ImageWidget(QWidget):
     frameSelected = pyqtSignal(int)
+    bboxSelected = pyqtSignal(int)
     def __init__(self) -> None:
         super().__init__()
         
@@ -101,7 +102,7 @@ class ImageWidget(QWidget):
 
                 if bbox.containsCoords(coords):
                     self.selectedId = int(r['track_id'])
-                    self.frameSelected.emit(self.selectedId)
+                    self.bboxSelected.emit(self.selectedId)
                     print(f"Selected {self.selectedId}")
                     self.repaint()
                     return
@@ -208,4 +209,8 @@ class ImageWidget(QWidget):
 
     def sizeHint(self) -> QSize:
         return QSize(640, 360)
+    
+    def selectBBox(self, bbox_id):
+        self.selectedId = bbox_id+1
+        self.repaint()
     

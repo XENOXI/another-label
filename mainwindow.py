@@ -84,6 +84,8 @@ class MainWindow(QMainWindow):
 
 
         self.timelineWidget.frameSelected.connect(self.imageWidget.setFrame)
+        self.timelineWidget.keypointsDisplay.selectedBboxUpdate.connect(self.imageWidget.selectBBox)
+        self.imageWidget.bboxSelected.connect(self.timelineWidget.keypointsDisplay.selectBBox)
 
         mainSplitter = QSplitter(Qt.Orientation.Vertical, self)
         mainSplitter.setStretchFactor(0, 1)
