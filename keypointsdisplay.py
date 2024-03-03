@@ -21,7 +21,7 @@ class KeypointsDisplay(QWidget):
         self.bbox_cnt = 10
         self.unique_bbox = np.empty(0)
         self.sequences = []
-        self.selected_bbox = 0
+        self.selectBBox(0)
         self.first_frame_to_render = 0
         self.last_frame_to_render = 0
         self.width_per_box = 0
@@ -158,3 +158,8 @@ class KeypointsDisplay(QWidget):
                 self.selected_bbox = (point.y()-10)//self.frame_box_size   
                 self.selectedBboxUpdate.emit(self.selected_bbox)            
                 self.repaint()
+    
+    def selectBBox(self, bbox_id):
+        self.selected_bbox = bbox_id-1
+        self.selectedBboxUpdate.emit(self.selected_bbox)
+        self.repaint()
