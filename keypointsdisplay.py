@@ -6,7 +6,7 @@ import numpy as np
 
 class KeypointsDisplay(QWidget):
     boxCountUpdated = pyqtSignal(int, int)
-    selectedFrameUpdated = pyqtSignal(int)
+    selectedBboxUpdate = pyqtSignal(int)
     def __init__(self):
         super().__init__()
         # SETTINGS
@@ -156,5 +156,5 @@ class KeypointsDisplay(QWidget):
             if point.y() > 10:
                 point.x()//self.frame_box_size
                 self.selected_bbox = (point.y()-10)//self.frame_box_size   
-                self.selectedFrameUpdated.emit(self.selected_bbox)            
+                self.selectedBboxUpdate.emit(self.selected_bbox)            
                 self.repaint()
