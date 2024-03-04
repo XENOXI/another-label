@@ -54,7 +54,7 @@ class ImageWidget(QWidget):
     def __init__(self) -> None:
         super().__init__()
         
-        self.selectedId = None
+        self.selectedId = 1
         self.selectedCorner = None
         self.labels = None
         self.shape = None
@@ -212,5 +212,9 @@ class ImageWidget(QWidget):
     
     def selectBBox(self, bbox_id):
         self.selectedId = bbox_id+1
+        self.repaint()
+    
+    def changeClass(self,cls,first_frame,second_frame):
+        self.labels.loc[np.bitwise_and(np.bitwise_and(self.labels["track_id"]==self.selectedId,self.labels["frame"]>=first_frame),self.labels["frame"]<=second_frame),"label"] = cls
         self.repaint()
     

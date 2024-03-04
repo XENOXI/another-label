@@ -11,6 +11,7 @@ class TimelineWidget(QWidget):
         super().__init__()
 
         self.timeline = QSlider(Qt.Orientation.Horizontal, self)
+        self.timeline.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.playButton = QPushButton("Play/Stop", self)
         self.framesLabel = QLabel("0/0", self)
 
@@ -60,4 +61,5 @@ class TimelineWidget(QWidget):
         self.frameSelected.emit(frame)
         self.keypointsDisplay.set_frame(frame)
         self.framesLabel.setText(f"{frame+1}/{self.framesCount}")
+    
 

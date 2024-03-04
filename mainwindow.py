@@ -1,6 +1,6 @@
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import Qt, pyqtSignal,QKeyCombination
 from PyQt6.QtWidgets import QMainWindow, QSlider, QMenu, QSizePolicy, QFileDialog, QProgressDialog,QSplitter, QScrollArea
-from PyQt6.QtGui import QAction, QKeyEvent,QPixmap
+from PyQt6.QtGui import QAction, QKeyEvent,QPixmap,QKeySequence
 import cv2
 from ultralytics import YOLO
 import pandas as pd
@@ -59,12 +59,10 @@ def detectLabels(videoPath):
 
 
 class MainWindow(QMainWindow):
-    keyPressed = pyqtSignal(int)
-    keyReleased = pyqtSignal(int)
     def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle("Labeler")
-
+        self.grabKeyboard()
         menuBar = self.menuBar()
         fileMenu = QMenu("File", self)
         menuBar.addMenu(fileMenu)
@@ -81,11 +79,10 @@ class MainWindow(QMainWindow):
 
         self.imageWidget = ImageWidget()
         self.timelineWidget = TimelineWidget()
-
-
         self.timelineWidget.frameSelected.connect(self.imageWidget.setFrame)
         self.timelineWidget.keypointsDisplay.selectedBboxUpdate.connect(self.imageWidget.selectBBox)
         self.imageWidget.bboxSelected.connect(self.timelineWidget.keypointsDisplay.selectBBox)
+        self.timelineWidget.keypointsDisplay.classUpdate.connect(self.imageWidget.changeClass)
 
         mainSplitter = QSplitter(Qt.Orientation.Vertical, self)
         mainSplitter.setStretchFactor(0, 1)
@@ -137,9 +134,52 @@ class MainWindow(QMainWindow):
             return
         self.labels.to_csv(labels_path, index=False)
 
+        
     def keyPressEvent(self, e: QKeyEvent | None) -> None:
-        self.keyPressed.emit(e.key())
+        key,modifier = e.key(),e.modifiers()
+
+        if modifier == Qt.KeyboardModifier.ShiftModifier or key==Qt.Key.Key_Shift:
+            self.timelineWidget.keypointsDisplay.mode = "multiselect"
+        else:
+            self.timelineWidget.keypointsDisplay.mode = "one-select"
+        
+        match key:
+            case Qt.Key.Key_Right:
+                self.timelineWidget.timeline.setValue(1+self.timelineWidget.timeline.value())
+            case Qt.Key.Key_Left:
+                self.timelineWidget.timeline.setValue(self.timelineWidget.timeline.value()-1)
+            case Qt.Key.Key_Down:
+                if self.timelineWidget.keypointsDisplay.selected_bbox + 1 < self.timelineWidget.keypointsDisplay.unique_bbox.shape[0]:
+                    self.timelineWidget.keypointsDisplay.selectBBox(self.timelineWidget.keypointsDisplay.selected_bbox+2)
+            case Qt.Key.Key_Up:
+                if self.timelineWidget.keypointsDisplay.selected_bbox > 0:
+                    self.timelineWidget.keypointsDisplay.selectBBox(self.timelineWidget.keypointsDisplay.selected_bbox)
+            case Qt.Key.Key_1:
+                self.timelineWidget.keypointsDisplay.draw_class(0)
+            case Qt.Key.Key_2:
+                self.timelineWidget.keypointsDisplay.draw_class(1)
+            case Qt.Key.Key_3:
+                self.timelineWidget.keypointsDisplay.draw_class(2)
+            case Qt.Key.Key_4:
+                self.timelineWidget.keypointsDisplay.draw_class(3)
+            case Qt.Key.Key_5:
+                self.timelineWidget.keypointsDisplay.draw_class(4)
+            case Qt.Key.Key_6:
+                self.timelineWidget.keypointsDisplay.draw_class(5)
+            case Qt.Key.Key_7:
+                self.timelineWidget.keypointsDisplay.draw_class(6)
+            case Qt.Key.Key_8:
+                self.timelineWidget.keypointsDisplay.draw_class(7)
+            case Qt.Key.Key_9:
+                self.timelineWidget.keypointsDisplay.draw_class(8)
+            # case Qt.Key.Key_0:
+            #     self.timelineWidget.keypointsDisplay.draw_class(0) 
+
+        
+        
+        
+
+        
     
-    def keyReleaseEvent(self, e: QKeyEvent | None) -> None:
-        self.keyReleased.emit(e.key())
+
         

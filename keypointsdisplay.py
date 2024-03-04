@@ -7,6 +7,7 @@ import numpy as np
 class KeypointsDisplay(QWidget):
     boxCountUpdated = pyqtSignal(int, int)
     selectedBboxUpdate = pyqtSignal(int)
+    classUpdate = pyqtSignal(int,int,int)
     def __init__(self):
         super().__init__()
         # SETTINGS
@@ -14,37 +15,39 @@ class KeypointsDisplay(QWidget):
         self.frame_rhomb_size = 10
         self.connection_heigth = 4
 
-
-        self.selected_frame = 0
+        self.first_selected_frame = 0
+        self.last_selected_frame = 0
+        self.mode = "one-select"
         self.labels = None
         self.frame_cnt = 0
         self.bbox_cnt = 10
         self.unique_bbox = np.empty(0)
         self.sequences = []
-        self.selectBBox(0)
+        self.selectBBox(1)
         self.first_frame_to_render = 0
         self.last_frame_to_render = 0
         self.width_per_box = 0
         
 
         self.labels_color = [Qt.GlobalColor.magenta,Qt.GlobalColor.blue]
-        self.selected_colors = [QColor(200,200,200),QColor(180,180,180),QColor(230,230,230)]
+        self.selected_colors = [QColor(180,180,180),QColor(150,150,150),QColor(230,230,230)]
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
 
     def paintEvent(self, a0: QPaintEvent | None) -> None:
         painter = QPainter(self)
+        
 
         self.width_per_box = self.width()//self.frame_box_size-1
 
 
         self.last_frame_to_render = self.width_per_box + self.first_frame_to_render
 
-        if self.selected_frame >= self.last_frame_to_render:
-            self.last_frame_to_render = self.selected_frame+1
+        if self.last_selected_frame >= self.last_frame_to_render:
+            self.last_frame_to_render = self.last_selected_frame+1
             self.first_frame_to_render = self.last_frame_to_render-self.width_per_box
-        elif self.selected_frame < self.first_frame_to_render:
-            self.first_frame_to_render = self.selected_frame
+        elif self.first_selected_frame < self.first_frame_to_render:
+            self.first_frame_to_render = self.first_selected_frame
             self.last_frame_to_render = self.first_frame_to_render + self.width_per_box
 
         
@@ -58,8 +61,8 @@ class KeypointsDisplay(QWidget):
 
         brush = QBrush(self.selected_colors[0],Qt.BrushStyle.SolidPattern)
         painter.setBrush(brush)
-
-        painter.drawRect(self.frame_box_size*(self.selected_frame-self.first_frame_to_render), 10, self.frame_box_size, self.frame_box_size*self.unique_bbox.shape[0])
+        for i in range(max(self.first_selected_frame,self.first_frame_to_render),self.last_selected_frame+1):
+            painter.drawRect(self.frame_box_size*(i-self.first_frame_to_render), 10, self.frame_box_size, self.frame_box_size*self.unique_bbox.shape[0])
 
         brush = QBrush(self.selected_colors[1],Qt.BrushStyle.SolidPattern)
         painter.setBrush(brush)
@@ -119,14 +122,24 @@ class KeypointsDisplay(QWidget):
                 
             painter.translate(self.frame_box_size*(self.first_frame_to_render - frames[i]),self.frame_box_size)
 
-        painter.fillRect(self.width_per_box*self.frame_box_size-self.frame_box_size//2 + 1, -self.unique_bbox.shape[0]*self.frame_box_size-3, self.frame_box_size, self.frame_box_size*self.unique_bbox.shape[0],self.palette().color(self.backgroundRole()))
+        painter.fillRect(self.width_per_box*self.frame_box_size-self.frame_box_size//2 + 1, -self.unique_bbox.shape[0]*self.frame_box_size-3, self.frame_box_size*2, self.frame_box_size*self.unique_bbox.shape[0],self.palette().color(self.backgroundRole()))
         painter.end()
 
     
 
 
     def set_frame(self,frame):
-        self.selected_frame = frame
+        if self.mode == "one-select":
+            self.last_selected_frame = frame
+            self.first_selected_frame = frame
+        elif frame>self.last_selected_frame:
+            self.last_selected_frame = frame
+        elif frame<self.first_selected_frame:
+            self.first_selected_frame = frame
+        elif self.last_selected_frame-frame < frame - self.first_selected_frame:
+            self.last_selected_frame = frame
+        else:
+            self.first_selected_frame = frame
         self.repaint()
 
     def set_frame_cnt(self,frame_cnt):
@@ -143,12 +156,6 @@ class KeypointsDisplay(QWidget):
     def sizeHint(self) -> QSize:
         return QSize(1000,10*self.frame_box_size)
     
-    def keyPressEvent(self, event):
-        print(self.keyevent_to_string(event))
-        
-
-        if self.keyevent_to_string(event) == "Control+Q":
-            self.close()
     
     def mousePressEvent(self, e: QMouseEvent) -> None:
         if e.button() == Qt.MouseButton.LeftButton:
@@ -163,3 +170,12 @@ class KeypointsDisplay(QWidget):
         self.selected_bbox = bbox_id-1
         self.selectedBboxUpdate.emit(self.selected_bbox)
         self.repaint()
+
+    def draw_class(self,cls):
+        if cls >= len(self.labels_color):
+            return
+        frames = self.sequences[self.selected_bbox]["frame"]
+        self.sequences[self.selected_bbox].loc[np.bitwise_and(frames >= self.first_selected_frame, frames <= self.last_selected_frame),"label"] = cls
+        self.classUpdate.emit(cls,self.first_selected_frame,self.last_selected_frame)
+        self.repaint()
+    
