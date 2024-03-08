@@ -81,7 +81,7 @@ class MainWindow(QMainWindow):
         self.timelineWidget = TimelineWidget()
         self.timelineWidget.frameSelected.connect(self.imageWidget.setFrame)
         self.timelineWidget.keypointsDisplay.selectedBboxUpdate.connect(self.imageWidget.selectBBox)
-        self.imageWidget.selectedBBoxChanged.connect(self.timelineWidget.keypointsDisplay.selectBBox)
+        self.imageWidget.selectedBBoxIdChanged.connect(self.timelineWidget.keypointsDisplay.selectBBox)
         self.timelineWidget.keypointsDisplay.classUpdate.connect(self.imageWidget.changeClass)
 
         mainSplitter = QSplitter(Qt.Orientation.Vertical, self)
@@ -93,7 +93,7 @@ class MainWindow(QMainWindow):
 
         self.setCentralWidget(mainSplitter)
 
-        self.labels = None
+        self.sequences = []
 
     def openVideoCB(self):
         videoPath = QFileDialog.getOpenFileName(self, "Open video")
@@ -102,9 +102,11 @@ class MainWindow(QMainWindow):
         
         framesCount, labelsDict = detectLabels(videoPath[0])
         
-        self.labels = pd.DataFrame(labelsDict)
-        self.imageWidget.setLabels(self.labels)
-        self.timelineWidget.setLabels(self.labels)
+        labels = pd.DataFrame(labelsDict)
+        for i in labels["track_id"].unique():
+            self.sequences.append(labels[labels["track_id"]==i].copy().sort_values(by="frame",ascending=True))
+        self.imageWidget.setSequences(self.sequences)
+        self.timelineWidget.setSequences(self.sequences)
         self.imageWidget.setVideo(videoPath[0])
         self.timelineWidget.setFramesCount(framesCount)
         
@@ -123,16 +125,18 @@ class MainWindow(QMainWindow):
         video.release()
 
         df = pd.read_csv(labelsPath[0])
+        for i in df["track_id"].unique():
+            self.sequences.append(df[df["track_id"]==i].copy().sort_values(by="frame",ascending=True))
         self.imageWidget.setVideo(videoPath[0])
-        self.imageWidget.setLabels(df)
-        self.timelineWidget.setLabels(df)
+        self.imageWidget.setSequences(self.sequences)
+        self.timelineWidget.setSequences(self.sequences)
         self.timelineWidget.setFramesCount(framesCount)
 
     def exportLabelsCb(self):
         labels_path = QFileDialog.getSaveFileName(self, "Save csv", None, "*.csv")[0]
         if labels_path == '':
             return
-        self.labels.to_csv(labels_path, index=False)
+        pd.concat(self.sequences, ignore_index=True).to_csv(labels_path, index=False)
 
         
     def keyPressEvent(self, e: QKeyEvent | None) -> None:

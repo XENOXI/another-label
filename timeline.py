@@ -54,8 +54,8 @@ class TimelineWidget(QWidget):
         self.keypointsDisplay.set_frame_cnt(framesCount)
         self.framesCount = framesCount
 
-    def setLabels(self, labels):
-        self.keypointsDisplay.set_labels(labels)
+    def setSequences(self, sequences):
+        self.keypointsDisplay.set_sequences(sequences)
 
     def sliderValueChanged(self, frame):
         self.frameSelected.emit(frame)

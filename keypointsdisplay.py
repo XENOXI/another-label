@@ -55,14 +55,14 @@ class KeypointsDisplay(QWidget):
         
 
         for i in range(0,self.width_per_box):
-            painter.drawRect(i*self.frame_box_size, 10, self.frame_box_size, self.frame_box_size*self.unique_bbox.shape[0])
+            painter.drawRect(i*self.frame_box_size, 10, self.frame_box_size, self.frame_box_size*len(self.sequences))
 
         
 
         brush = QBrush(self.selected_colors[0],Qt.BrushStyle.SolidPattern)
         painter.setBrush(brush)
         for i in range(max(self.first_selected_frame,self.first_frame_to_render),self.last_selected_frame+1):
-            painter.drawRect(self.frame_box_size*(i-self.first_frame_to_render), 10, self.frame_box_size, self.frame_box_size*self.unique_bbox.shape[0])
+            painter.drawRect(self.frame_box_size*(i-self.first_frame_to_render), 10, self.frame_box_size, self.frame_box_size*len(self.sequences))
 
         brush = QBrush(self.selected_colors[1],Qt.BrushStyle.SolidPattern)
         painter.setBrush(brush)
@@ -122,7 +122,7 @@ class KeypointsDisplay(QWidget):
                 
             painter.translate(self.frame_box_size*(self.first_frame_to_render - frames[i]),self.frame_box_size)
 
-        painter.fillRect(self.width_per_box*self.frame_box_size-self.frame_box_size//2 + 1, -self.unique_bbox.shape[0]*self.frame_box_size-3, self.frame_box_size*2, self.frame_box_size*self.unique_bbox.shape[0],self.palette().color(self.backgroundRole()))
+        painter.fillRect(self.width_per_box*self.frame_box_size-self.frame_box_size//2 + 1, -len(self.sequences)*self.frame_box_size-3, self.frame_box_size*2, self.frame_box_size*len(self.sequences),self.palette().color(self.backgroundRole()))
         painter.end()
 
     
@@ -146,12 +146,9 @@ class KeypointsDisplay(QWidget):
         self.frame_cnt = frame_cnt
         self.repaint()
     
-    def set_labels(self, labels:pd.DataFrame):
-        
-        self.unique_bbox = pd.unique(labels["track_id"])
-        self.boxCountUpdated.emit(self.unique_bbox.shape[0],self.frame_box_size)
-        for i in self.unique_bbox:
-            self.sequences.append(labels[labels["track_id"]==i].copy().sort_values(by="frame",ascending=True))
+    def set_sequences(self, sequences: list[pd.DataFrame]):
+        self.boxCountUpdated.emit(len(sequences),self.frame_box_size)
+        self.sequences = sequences
 
     def sizeHint(self) -> QSize:
         return QSize(1000,10*self.frame_box_size)
@@ -160,14 +157,14 @@ class KeypointsDisplay(QWidget):
     def mousePressEvent(self, e: QMouseEvent) -> None:
         if e.button() == Qt.MouseButton.LeftButton:
             point = e.pos()
-            if point.y() > 10 and point.y()<10 + self.frame_box_size*self.unique_bbox.shape[0]:
+            if point.y() > 10 and point.y()<10 + self.frame_box_size*len(self.sequences):
                 point.x()//self.frame_box_size
                 self.selected_bbox = (point.y()-10)//self.frame_box_size   
                 self.selectedBboxUpdate.emit(self.selected_bbox)            
                 self.repaint()
     
     def selectBBox(self, bbox_id):
-        self.selected_bbox = bbox_id-1
+        self.selected_bbox = bbox_id
         self.selectedBboxUpdate.emit(self.selected_bbox)
         self.repaint()
 

@@ -50,18 +50,19 @@ class BBox:
     
 class ImageWidget(QWidget):
     selectedFrameChanged = pyqtSignal(int)
-    selectedBBoxChanged = pyqtSignal(int)
+    selectedBBoxIdChanged = pyqtSignal(int)
     def __init__(self) -> None:
         super().__init__()
         
-        self.selectedBBox = 1
+        self.selectedBBoxId = 0
         self.selectedCorner = None
-        self.labels = None
+        self.sequences = []
         self.shape = None
         self.resizedShape = None
         self.frame = None
         self.cap = None
         self.lastMousePos = None
+        self.startBBoxPos = None
         self.widthOffset = 0
         self.heightOffset = 0
 
@@ -69,8 +70,8 @@ class ImageWidget(QWidget):
 
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
-    def setLabels(self, labels):
-        self.labels = labels        
+    def setSequences(self, sequences):
+        self.sequences = sequences        
 
     def setVideo(self, filepath):
         self.cap = cv2.VideoCapture(filepath)
@@ -96,19 +97,26 @@ class ImageWidget(QWidget):
         coords = self.getCoordsFromMouseEvent(e)
         if e.button() == Qt.MouseButton.LeftButton:
             self.lastMousePos = coords
-            if self.selectedBBox is not None:
+            if self.selectedBBoxId is not None:
                 self.setCursor(Qt.CursorShape.SizeAllCursor)
+            else:
+                self.startBBoxPos = coords
         if e.button() == Qt.MouseButton.RightButton:
-            for r in self.labels[self.labels['frame'] == self.frame].iloc:
+            for track_id, seq in enumerate(self.sequences):
+                df = seq[seq['frame'] == self.frame]
+                if len(df) == 0:
+                    continue
+                r = df.iloc[0]
                 bbox = BBox(r)
 
                 if bbox.containsCoords(coords):
-                    self.selectedBBox = int(r['track_id'])
-                    self.selectedBBoxChanged.emit(self.selectedBBox)
-                    print(f"Selected {self.selectedBBox}")
+                    self.selectedBBoxId = track_id
+                    self.selectedBBoxIdChanged.emit(self.selectedBBoxId)
+                    print(f"Selected {self.selectedBBoxId}")
                     self.repaint()
                     return
-            self.selectedBBox = None
+                
+            self.selectedBBoxId = None
             self.repaint()
             
 
@@ -117,43 +125,56 @@ class ImageWidget(QWidget):
         self.selectedCorner = None
         if e.button() == Qt.MouseButton.LeftButton:
             self.lastMousePos = None
+
+            if self.startBBoxPos:
+                coords = self.getCoordsFromMouseEvent(e)
+                x = (self.startBBoxPos[0] + coords[0])/2
+                y = (self.startBBoxPos[1] + coords[1])/2
+                w = abs(self.startBBoxPos[0] - coords[0])
+                h = abs(self.startBBoxPos[1] - coords[1])
+                # self.labels
+
+                self.startBBoxPos = None
     
     def mouseMoveEvent(self, e: QMouseEvent | None) -> None:
-        if self.selectedBBox is not None and self.lastMousePos is not None:
+        if self.selectedBBoxId is not None and self.lastMousePos is not None:
             lastX, lastY = self.lastMousePos
             x, y = self.getCoordsFromMouseEvent(e)
 
-            data = self.labels[np.logical_and(self.labels['track_id'] == self.selectedBBox, self.labels['frame'] == self.frame)].iloc[0]
+            selectedBBoxIdData = self.sequences[self.selectedBBoxId]
+            data = selectedBBoxIdData[selectedBBoxIdData['frame'] == self.frame].iloc[0]
             bbox = BBox(data)
 
             last = np.array(self.lastMousePos)
 
+            
             if np.linalg.norm(np.array(bbox.rt_corner()) - last) <= 20 or self.selectedCorner == 0:
                 self.selectedCorner = 0
-                self.labels.loc[np.logical_and(self.labels['track_id'] == self.selectedBBox, self.labels['frame'] == self.frame),'w'] += x - lastX
-                self.labels.loc[np.logical_and(self.labels['track_id'] == self.selectedBBox, self.labels['frame'] == self.frame),'h'] -= y - lastY
+                selectedBBoxIdData.loc[selectedBBoxIdData['frame'] == self.frame,'w'] += x - lastX
+                selectedBBoxIdData.loc[selectedBBoxIdData['frame'] == self.frame,'h'] -= y - lastY
                 self.repaint()
             elif np.linalg.norm(np.array(bbox.lt_corner()) - last) <= 20 or self.selectedCorner == 1:
                 self.selectedCorner = 1
-                self.labels.loc[np.logical_and(self.labels['track_id'] == self.selectedBBox, self.labels['frame'] == self.frame),'w'] -= x - lastX
-                self.labels.loc[np.logical_and(self.labels['track_id'] == self.selectedBBox, self.labels['frame'] == self.frame),'h'] -= y - lastY
+                selectedBBoxIdData.loc[selectedBBoxIdData['frame'] == self.frame,'w'] -= x - lastX
+                selectedBBoxIdData.loc[selectedBBoxIdData['frame'] == self.frame,'h'] -= y - lastY
                 self.repaint()
             elif np.linalg.norm(np.array(bbox.rb_corner()) - last) <= 20 or self.selectedCorner == 2:
                 self.selectedCorner = 2
-                self.labels.loc[np.logical_and(self.labels['track_id'] == self.selectedBBox, self.labels['frame'] == self.frame),'w'] += x - lastX
-                self.labels.loc[np.logical_and(self.labels['track_id'] == self.selectedBBox, self.labels['frame'] == self.frame),'h'] += y - lastY
+                selectedBBoxIdData.loc[selectedBBoxIdData['frame'] == self.frame,'w'] += x - lastX
+                selectedBBoxIdData.loc[selectedBBoxIdData['frame'] == self.frame,'h'] += y - lastY
                 self.repaint()
             elif np.linalg.norm(np.array(bbox.lb_corner()) - last) <= 20 or self.selectedCorner == 3:
                 self.selectedCorner = 3
-                self.labels.loc[np.logical_and(self.labels['track_id'] == self.selectedBBox, self.labels['frame'] == self.frame),'w'] -= x - lastX
-                self.labels.loc[np.logical_and(self.labels['track_id'] == self.selectedBBox, self.labels['frame'] == self.frame),'h'] += y - lastY
+                selectedBBoxIdData.loc[selectedBBoxIdData['frame'] == self.frame,'w'] -= x - lastX
+                selectedBBoxIdData.loc[selectedBBoxIdData['frame'] == self.frame,'h'] += y - lastY
                 self.repaint()
             elif(bbox.containsCoords(self.lastMousePos)):
-                self.labels.loc[np.logical_and(self.labels['track_id'] == self.selectedBBox, self.labels['frame'] == self.frame),'x'] += x - lastX
-                self.labels.loc[np.logical_and(self.labels['track_id'] == self.selectedBBox, self.labels['frame'] == self.frame),'y'] += y - lastY
+                selectedBBoxIdData.loc[selectedBBoxIdData['frame'] == self.frame,'x'] += x - lastX
+                selectedBBoxIdData.loc[selectedBBoxIdData['frame'] == self.frame,'y'] += y - lastY
                 self.repaint()
             self.lastMousePos = (x, y)
-
+        if self.startBBoxPos:
+            self.lastMousePos = self.getCoordsFromMouseEvent(e)
 
             
     
@@ -172,11 +193,17 @@ class ImageWidget(QWidget):
         if not ret:
             print("FRAME READ FAILURE")
             return
-        for r in self.labels[self.labels['frame'] == self.frame].iloc:
+        
+        for track_id, seq in enumerate(self.sequences):
+            df = seq[seq['frame'] == self.frame]
+            if len(df) == 0:
+                continue
+            r = df.iloc[0]
+            
             color = (0, 255, 0)
             if r['label'] == 1:
                 color = (255, 0, 0)
-            if int(r['track_id']) == self.selectedBBox:
+            if track_id == self.selectedBBoxId:
                 color = (255, 255, 0)
                 bbox = BBox(r)
                 cv2.circle(image, bbox.lt_corner(), 10, color, -1)
@@ -190,6 +217,9 @@ class ImageWidget(QWidget):
 
             bbox = BBox(r)
             image = cv2.rectangle(image, bbox.lt_corner(), bbox.rb_corner(), color, 2)
+
+        if self.startBBoxPos:
+            image = cv2.rectangle(image, self.startBBoxPos, self.lastMousePos, 10, (255, 255, 255), -1)
         
         if self.aspectRatio > self.height()/self.width():
             newWidth = int(self.height()/self.aspectRatio)
@@ -213,10 +243,10 @@ class ImageWidget(QWidget):
         return QSize(640, 360)
     
     def selectBBox(self, bbox_id):
-        self.selectedBBox = bbox_id+1
+        self.selectedBBoxId = bbox_id
         self.repaint()
     
     def changeClass(self,cls,first_frame,second_frame):
-        self.labels.loc[np.bitwise_and(np.bitwise_and(self.labels["track_id"]==self.selectedBBox,self.labels["frame"]>=first_frame),self.labels["frame"]<=second_frame),"label"] = cls
+        # self.labels.loc[np.bitwise_and(np.bitwise_and(self.labels["track_id"]==self.selectedBBoxId,self.labels["frame"]>=first_frame),self.labels["frame"]<=second_frame),"label"] = cls
         self.repaint()
     
