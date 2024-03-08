@@ -81,7 +81,7 @@ class MainWindow(QMainWindow):
         self.timelineWidget = TimelineWidget()
         self.timelineWidget.frameSelected.connect(self.imageWidget.setFrame)
         self.timelineWidget.keypointsDisplay.selectedBboxUpdate.connect(self.imageWidget.selectBBox)
-        self.imageWidget.bboxSelected.connect(self.timelineWidget.keypointsDisplay.selectBBox)
+        self.imageWidget.selectedBBoxChanged.connect(self.timelineWidget.keypointsDisplay.selectBBox)
         self.timelineWidget.keypointsDisplay.classUpdate.connect(self.imageWidget.changeClass)
 
         mainSplitter = QSplitter(Qt.Orientation.Vertical, self)
