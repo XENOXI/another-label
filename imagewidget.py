@@ -91,6 +91,8 @@ class ImageWidget(QWidget):
         return (x, y)
 
     def mousePressEvent(self, e: QMouseEvent) -> None:
+        if self.shape is None:
+            return
         coords = self.getCoordsFromMouseEvent(e)
         if e.button() == Qt.MouseButton.LeftButton:
             self.lastMousePos = coords
