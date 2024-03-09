@@ -51,6 +51,7 @@ class BBox:
 class ImageWidget(QWidget):
     selectedFrameChanged = pyqtSignal(int)
     selectedBBoxIdChanged = pyqtSignal(int)
+    newBBoxCreated = pyqtSignal(int, int, int, int)
     def __init__(self) -> None:
         super().__init__()
         
@@ -112,7 +113,6 @@ class ImageWidget(QWidget):
                 if bbox.containsCoords(coords):
                     self.selectedBBoxId = track_id
                     self.selectedBBoxIdChanged.emit(self.selectedBBoxId)
-                    print(f"Selected {self.selectedBBoxId}")
                     self.repaint()
                     return
                 
@@ -128,11 +128,11 @@ class ImageWidget(QWidget):
 
             if self.startBBoxPos:
                 coords = self.getCoordsFromMouseEvent(e)
-                x = (self.startBBoxPos[0] + coords[0])/2
-                y = (self.startBBoxPos[1] + coords[1])/2
+                x = (self.startBBoxPos[0] + coords[0])//2
+                y = (self.startBBoxPos[1] + coords[1])//2
                 w = abs(self.startBBoxPos[0] - coords[0])
                 h = abs(self.startBBoxPos[1] - coords[1])
-                # self.labels
+                self.newBBoxCreated.emit(x, y, w, h)
 
                 self.startBBoxPos = None
     
@@ -175,6 +175,7 @@ class ImageWidget(QWidget):
             self.lastMousePos = (x, y)
         if self.startBBoxPos:
             self.lastMousePos = self.getCoordsFromMouseEvent(e)
+            self.repaint()
 
             
     
@@ -219,7 +220,8 @@ class ImageWidget(QWidget):
             image = cv2.rectangle(image, bbox.lt_corner(), bbox.rb_corner(), color, 2)
 
         if self.startBBoxPos:
-            image = cv2.rectangle(image, self.startBBoxPos, self.lastMousePos, 10, (255, 255, 255), -1)
+            # print(self.startBBoxPos, self.lastMousePos)
+            image = cv2.rectangle(image, self.startBBoxPos, self.lastMousePos, (255, 255, 255), 2)
         
         if self.aspectRatio > self.height()/self.width():
             newWidth = int(self.height()/self.aspectRatio)
