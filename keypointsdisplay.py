@@ -3,6 +3,7 @@ from PyQt6.QtGui import QPaintEvent, QPainter,QColor,QBrush,QShortcut,QKeyEvent,
 from PyQt6.QtWidgets import QWidget, QSizePolicy
 import pandas as pd
 import numpy as np
+# from numba import njit
 
 class KeypointsDisplay(QWidget):
     boxCountUpdated = pyqtSignal(int, int)
@@ -33,7 +34,7 @@ class KeypointsDisplay(QWidget):
         self.selected_colors = [QColor(180,180,180),QColor(150,150,150),QColor(230,230,230)]
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
-
+    # @njit(nopython=False)
     def paintEvent(self, a0: QPaintEvent | None) -> None:
         painter = QPainter(self)
         
@@ -146,6 +147,7 @@ class KeypointsDisplay(QWidget):
         self.frame_cnt = frame_cnt
         self.repaint()
     
+    # @njit
     def set_sequences(self, sequences: list[pd.DataFrame]):
         self.boxCountUpdated.emit(len(sequences),self.frame_box_size)
         self.sequences = sequences
@@ -177,7 +179,7 @@ class KeypointsDisplay(QWidget):
 
        
         
-    
+    # @njit
     def update_seq(self,seq_i):       
         sq = self.seqs_copy[seq_i]
         tab = sq.copy()

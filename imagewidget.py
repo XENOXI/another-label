@@ -43,6 +43,12 @@ class BBox:
     def b_middle(self):
         return (int(self.r['x']), int(self.r['y'] + self.r['h']/2))
     
+    def get_pose(self):
+        lst = []
+        for i in range(17):
+            lst.append((int(self.r['x'+str(i)]),int(self.r['y'+str(i)])))
+        return (lst)
+    
     def containsCoords(self, coords):
         lt = self.lt_corner()
         rb = self.rb_corner()
@@ -221,6 +227,11 @@ class ImageWidget(QWidget):
 
             bbox = BBox(r)
             image = cv2.rectangle(image, bbox.lt_corner(), bbox.rb_corner(), color, 2)
+            pointsPose = bbox.get_pose()
+            for point in pointsPose:
+                if point[0]==0:
+                    continue
+                image = cv2.circle(image, point, radius=1, color=(0, 0, 255), thickness=1)
 
         if self.startBBoxPos:
             # print(self.startBBoxPos, self.lastMousePos)

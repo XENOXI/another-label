@@ -4,12 +4,14 @@ from PyQt6.QtGui import QAction, QKeyEvent,QPixmap,QKeySequence,QWheelEvent
 import cv2
 from ultralytics import YOLO
 import pandas as pd
+# from numba import njit
 
 from imagewidget import ImageWidget
 from timeline import TimelineWidget
 
+# @njit(nopython=False)
 def detectLabels(videoPath):
-    model = YOLO("yolov8m.pt")
+    model = YOLO("yolov8m-pose.pt")
     video = cv2.VideoCapture(videoPath)
     framesCount = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
     print(f"Frames count: {framesCount}")
