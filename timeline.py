@@ -56,6 +56,7 @@ class TimelineWidget(QWidget):
 
     def setSequences(self, sequences):
         self.keypointsDisplay.set_sequences(sequences)
+        
 
     def sliderValueChanged(self, frame):
         self.frameSelected.emit(frame)

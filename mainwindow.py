@@ -1,6 +1,6 @@
 from PyQt6.QtCore import Qt, pyqtSignal,QKeyCombination
 from PyQt6.QtWidgets import QMainWindow, QSlider, QMenu, QSizePolicy, QFileDialog, QProgressDialog,QSplitter, QScrollArea
-from PyQt6.QtGui import QAction, QKeyEvent,QPixmap,QKeySequence
+from PyQt6.QtGui import QAction, QKeyEvent,QPixmap,QKeySequence,QWheelEvent
 import cv2
 from ultralytics import YOLO
 import pandas as pd
@@ -113,8 +113,8 @@ class MainWindow(QMainWindow):
         print("done")
 
     def importLabelsCb(self):
-        videoPath = QFileDialog.getOpenFileName(self, "Open video")
-        labelsPath = QFileDialog.getOpenFileName(self, "Import labels")
+        videoPath = QFileDialog.getOpenFileName(self, "Open video", filter="*.mp4")
+        labelsPath = QFileDialog.getOpenFileName(self, "Import labels", filter="*.csv")
 
         if videoPath[0] == '' or labelsPath[0] == '':
             return
@@ -137,11 +137,19 @@ class MainWindow(QMainWindow):
         if labels_path == '':
             return
         pd.concat(self.sequences, ignore_index=True).to_csv(labels_path, index=False)
+    
+    def wheelEvent(self, event:QWheelEvent):
+        
+        numDegrees = event.angleDelta().x() // 8
+
+        self.timelineWidget.timeline.setValue(self.timelineWidget.timeline.value()-numDegrees)
+
+        event.accept()
 
         
     def keyPressEvent(self, e: QKeyEvent | None) -> None:
         key,modifier = e.key(),e.modifiers()
-
+    
         if modifier == Qt.KeyboardModifier.ShiftModifier or key==Qt.Key.Key_Shift:
             self.timelineWidget.keypointsDisplay.mode = "multiselect"
         else:
@@ -153,11 +161,11 @@ class MainWindow(QMainWindow):
             case Qt.Key.Key_Left:
                 self.timelineWidget.timeline.setValue(self.timelineWidget.timeline.value()-1)
             case Qt.Key.Key_Down:
-                if self.timelineWidget.keypointsDisplay.selected_bbox + 1 < self.timelineWidget.keypointsDisplay.unique_bbox.shape[0]:
-                    self.timelineWidget.keypointsDisplay.selectBBox(self.timelineWidget.keypointsDisplay.selected_bbox+2)
+                if self.timelineWidget.keypointsDisplay.selected_bbox + 1 < len(self.timelineWidget.keypointsDisplay.sequences):
+                    self.timelineWidget.keypointsDisplay.selectBBox(self.timelineWidget.keypointsDisplay.selected_bbox+1)
             case Qt.Key.Key_Up:
                 if self.timelineWidget.keypointsDisplay.selected_bbox > 0:
-                    self.timelineWidget.keypointsDisplay.selectBBox(self.timelineWidget.keypointsDisplay.selected_bbox)
+                    self.timelineWidget.keypointsDisplay.selectBBox(self.timelineWidget.keypointsDisplay.selected_bbox-1)
             case Qt.Key.Key_1:
                 self.timelineWidget.keypointsDisplay.draw_class(0)
             case Qt.Key.Key_2:
@@ -176,8 +184,11 @@ class MainWindow(QMainWindow):
                 self.timelineWidget.keypointsDisplay.draw_class(7)
             case Qt.Key.Key_9:
                 self.timelineWidget.keypointsDisplay.draw_class(8)
+            case Qt.Key.Key_A:
+                self.timelineWidget.keypointsDisplay.add_new_keypoint()
             # case Qt.Key.Key_0:
             #     self.timelineWidget.keypointsDisplay.draw_class(0) 
+        
 
         
         
