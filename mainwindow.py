@@ -17,6 +17,9 @@ def detectLabels(videoPath):
     progress.setWindowModality(Qt.WindowModality.WindowModal)
 
     labelsDict = {"frame": [], "track_id": [], "x": [], "y": [], "h": [], "w": [], "label": []}
+    for t in range(17):
+        labelsDict['x'+str(t)] = []
+        labelsDict['y'+str(t)] = []
 
     for i in range(framesCount):
         progress.setValue(i)
@@ -33,12 +36,13 @@ def detectLabels(videoPath):
             cls = res[0].boxes.cls.int().cpu().tolist()
             boxes = res[0].boxes.xywh.cpu()
             track_ids = res[0].boxes.id.int().cpu().tolist()
+            keypoints = res[0].keypoints.xy.cpu().tolist()
         else:
             cls = []
             boxes = []
             track_ids = []
 
-        for cl, box, track_id in zip(cls, boxes, track_ids):
+        for box, track_id, cl, keys in zip(boxes, track_ids, cls, keypoints):
             if cl != 0:
                 continue
 
@@ -51,6 +55,9 @@ def detectLabels(videoPath):
             labelsDict['w'].append(w.item())
             labelsDict['h'].append(h.item())
             labelsDict['label'].append(0)
+            for t in range(17):
+                labelsDict['x'+str(t)].append(int(keys[t][0]))
+                labelsDict['y'+str(t)].append(int(keys[t][1]))
     else:
         progress.setValue(framesCount)
     
