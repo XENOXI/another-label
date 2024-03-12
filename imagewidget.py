@@ -142,7 +142,10 @@ class ImageWidget(QWidget):
             x, y = self.getCoordsFromMouseEvent(e)
 
             selectedBBoxIdData = self.sequences[self.selectedBBoxId]
-            data = selectedBBoxIdData[selectedBBoxIdData['frame'] == self.frame].iloc[0]
+            datas = selectedBBoxIdData[selectedBBoxIdData['frame'] == self.frame]
+            if len(datas) == 0:
+                return
+            data = datas.iloc[0]
             bbox = BBox(data)
 
             last = np.array(self.lastMousePos)
