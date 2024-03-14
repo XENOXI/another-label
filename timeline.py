@@ -44,7 +44,7 @@ class TimelineWidget(QWidget):
         self.setLayout(mainLayout)
 
         self.timeline.valueChanged.connect(self.sliderValueChanged)
-        self.keypointsDisplay.boxCountUpdated.connect(self.labelList.set_bboxes_cnt)
+        self.keypointsDisplay.boxCountUpdated.connect(self.labelList.set_frame_box_size)
         self.keypointsDisplay.selectedBboxUpdate.connect(self.labelList.set_selected_bbox)
 
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)

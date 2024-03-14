@@ -20,9 +20,13 @@ class LabelList(QWidget):
         for i in range(self.bbox_cnt):
             painter.drawText(10,15+self.frame_box_size//2+i*self.frame_box_size,f"{i}")
 
-    def set_bboxes_cnt(self,bbox_cnt,frame_box_size):
+    def set_frame_box_size(self,bbox_cnt,frame_box_size):
         self.bbox_cnt = bbox_cnt
         self.frame_box_size = frame_box_size
+        self.repaint()
+    
+    def set_bboxes_cnt(self,bbox_cnt):
+        self.bbox_cnt = bbox_cnt
         self.repaint()
     
     def set_selected_bbox(self,box):

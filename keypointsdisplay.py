@@ -9,6 +9,8 @@ class KeypointsDisplay(QWidget):
     selectedBboxUpdate = pyqtSignal(int)
     imageWidgetRepaint = pyqtSignal()
     setFrame = pyqtSignal(int)
+
+    tableUpdate = pyqtSignal()
     def __init__(self):
         super().__init__()
         # SETTINGS
@@ -38,6 +40,12 @@ class KeypointsDisplay(QWidget):
 
     def paintEvent(self, a0: QPaintEvent | None) -> None:
         painter = QPainter(self)
+
+        if len(self.sequences)==0:
+            painter.translate(self.width()//2,30)
+            painter.drawText(0,0,"HEHE")
+            painter.end()
+            return
         
 
         self.width_per_box = self.width()//self.frame_box_size-1
@@ -87,14 +95,21 @@ class KeypointsDisplay(QWidget):
         for seq in self.sequences:  
             classes = seq["label"].to_numpy()
             frames = seq["frame"].to_numpy()
- 
-            if int(frames[0]) > self.last_frame_to_render or int(frames[frames.shape[0]-1]) < self.first_frame_to_render:
+
+            if seq.shape[0] == 0 or int(frames[0]) > self.last_frame_to_render or int(frames[frames.shape[0]-1]) < self.first_frame_to_render:
                 painter.translate(0,self.frame_box_size)
                 continue
             
             i = 0
             if seq.shape[0] == 1:
                 painter.translate(self.frame_box_size*(frames[i]-self.first_frame_to_render),0) 
+                brush.setColor(last_cl)
+                painter.setBrush(brush)
+                painter.rotate(45)
+                painter.drawRect(0, 0, self.frame_rhomb_size, self.frame_rhomb_size)
+                painter.rotate(-45)
+                painter.translate(0,self.frame_box_size)
+                continue
             
             
 
@@ -205,16 +220,19 @@ class KeypointsDisplay(QWidget):
     def draw_class(self,cls):
         if cls >= len(self.labels_color):
             return
+        
+        self.tableUpdate.emit()
         frames = self.sequences[self.selected_bbox]["frame"]
-        self.sequences[self.selected_bbox].loc[np.bitwise_and(frames >= self.first_selected_frame, frames <= self.last_selected_frame),"label"] = cls       
+        self.sequences[self.selected_bbox].loc[np.bitwise_and(frames >= self.first_selected_frame, frames <= self.last_selected_frame),"label"] = cls    
+        self.imageWidgetRepaint.emit()
         self.repaint()
         
     
-    def add_new_keypoint(self):
-        
+    def add_new_keypoint(self): 
         if self.mode != "one-select" and np.any(sq["frame"]==self.last_selected_frame):
             return
         
+        self.tableUpdate.emit()
         
         sq = self.sequences[self.selected_bbox]
         
@@ -234,6 +252,9 @@ class KeypointsDisplay(QWidget):
                                     "h":[(max_x2-max_x1)*div + max_x1], "w":[(max_y2-max_y1)*div + max_y1],"label":[sq['label'].iloc[i]]})
             
             buff = pd.concat([sq,buff],ignore_index=True).sort_values("frame",ascending=True)
+        elif sq.shape[0]==0:
+            buff = pd.DataFrame({"frame":[self.last_selected_frame],"track_id":[0], "x":[0], "y":[0],
+                                    "h":[30], "w":[40],"label":[0]})
         else: 
             if self.last_selected_frame < sq["frame"].iloc[0]:
                 buff = sq[0:1].copy()
@@ -247,9 +268,29 @@ class KeypointsDisplay(QWidget):
         self.repaint()
 
     def delete_keypoint(self):
+        self.tableUpdate.emit()
         frames = self.sequences[self.selected_bbox]["frame"]
         self.sequences[self.selected_bbox] = self.sequences[self.selected_bbox].drop(frames.index[np.bitwise_and(frames >= self.first_selected_frame, frames <= self.last_selected_frame)])
         self.imageWidgetRepaint.emit()
+        self.repaint()
+    
+    def delete_sequance(self):
+        self.tableUpdate.emit()
+        self.sequences.pop(self.selected_bbox)
+        self.boxCountUpdated.emit(len(self.sequences),self.frame_box_size)
+        if self.selected_bbox >= len(self.sequences) and len(self.sequences) != 0:
+            self.selected_bbox -= 1
+
+        self.imageWidgetRepaint.emit()
+        self.repaint()
+    
+    def add_sequance(self):
+        self.tableUpdate.emit()
+        self.sequences.append(pd.DataFrame({"frame":[self.last_selected_frame],"track_id":[0], "x":[0], "y":[0],
+                                    "h":[100], "w":[200],"label":[0]}))
+        self.selected_bbox = len(self.sequences)-1
+        self.imageWidgetRepaint.emit()
+        self.boxCountUpdated.emit(len(self.sequences),self.frame_box_size)
         self.repaint()
 
 

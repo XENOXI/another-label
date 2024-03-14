@@ -1,6 +1,6 @@
 from PyQt6.QtCore import Qt, pyqtSignal,QKeyCombination
 from PyQt6.QtWidgets import QMainWindow, QSlider, QMenu, QSizePolicy, QFileDialog, QProgressDialog,QSplitter, QScrollArea
-from PyQt6.QtGui import QAction, QKeyEvent,QPixmap,QKeySequence,QWheelEvent
+from PyQt6.QtGui import QAction, QKeyEvent,QPixmap,QKeySequence,QWheelEvent,QUndoStack,QUndoCommand
 import cv2
 from ultralytics import YOLO
 import pandas as pd
@@ -84,7 +84,13 @@ class MainWindow(QMainWindow):
         self.imageWidget.selectedBBoxIdChanged.connect(self.timelineWidget.keypointsDisplay.selectBBox)
         self.timelineWidget.keypointsDisplay.imageWidgetRepaint.connect(self.imageWidget.repaint)
         self.timelineWidget.keypointsDisplay.setFrame.connect(self.setFrame)
+        self.timelineWidget.keypointsDisplay.tableUpdate.connect(self.make_undo_command)
+        self.imageWidget.tableUpdate.connect(self.make_undo_command)
         self.imageWidget.timelineRepaint.connect(self.timelineWidget.keypointsDisplay.repaint)
+
+        self.mUndoStack = QUndoStack(self)
+        self.mUndoStack.setUndoLimit(10)
+
 
         mainSplitter = QSplitter(Qt.Orientation.Vertical, self)
         mainSplitter.setStretchFactor(0, 1)
@@ -157,52 +163,101 @@ class MainWindow(QMainWindow):
         else:
             self.timelineWidget.keypointsDisplay.mode = "one-select"
         
-        match key:
-            case Qt.Key.Key_Right:
-                self.setFrame(self.timelineWidget.timeline.value()+1)
-            case Qt.Key.Key_Left:
-                self.setFrame(self.timelineWidget.timeline.value()-1)
-            case Qt.Key.Key_Down:
-                if self.timelineWidget.keypointsDisplay.selected_bbox + 1 < len(self.timelineWidget.keypointsDisplay.sequences):
-                    self.timelineWidget.keypointsDisplay.selectBBox(self.timelineWidget.keypointsDisplay.selected_bbox+1)
-            case Qt.Key.Key_Up:
-                if self.timelineWidget.keypointsDisplay.selected_bbox > 0:
-                    self.timelineWidget.keypointsDisplay.selectBBox(self.timelineWidget.keypointsDisplay.selected_bbox-1)
-            case Qt.Key.Key_1:
-                self.timelineWidget.keypointsDisplay.draw_class(0)
-            case Qt.Key.Key_2:
-                self.timelineWidget.keypointsDisplay.draw_class(1)
-            case Qt.Key.Key_3:
-                self.timelineWidget.keypointsDisplay.draw_class(2)
-            case Qt.Key.Key_4:
-                self.timelineWidget.keypointsDisplay.draw_class(3)
-            case Qt.Key.Key_5:
-                self.timelineWidget.keypointsDisplay.draw_class(4)
-            case Qt.Key.Key_6:
-                self.timelineWidget.keypointsDisplay.draw_class(5)
-            case Qt.Key.Key_7:
-                self.timelineWidget.keypointsDisplay.draw_class(6)
-            case Qt.Key.Key_8:
-                self.timelineWidget.keypointsDisplay.draw_class(7)
-            case Qt.Key.Key_9:
-                self.timelineWidget.keypointsDisplay.draw_class(8)
-            case Qt.Key.Key_A:
-                self.timelineWidget.keypointsDisplay.add_new_keypoint()
-            case Qt.Key.Key_Delete:
-                self.timelineWidget.keypointsDisplay.delete_keypoint()
-            # case Qt.Key.Key_0:
-            #     self.timelineWidget.keypointsDisplay.draw_class(0) 
+        if modifier == Qt.KeyboardModifier.ControlModifier:
+            match key:
+                case Qt.Key.Key_Z:
+                    self.mUndoStack.undo()
+                case Qt.Key.Key_Y:
+                    self.mUndoStack.redo()
+        else:
+            match key:
+                case Qt.Key.Key_Right:
+                    self.setFrame(self.timelineWidget.timeline.value()+1)
+                case Qt.Key.Key_Left:
+                    self.setFrame(self.timelineWidget.timeline.value()-1)
+                case Qt.Key.Key_Down:
+                    if self.timelineWidget.keypointsDisplay.selected_bbox + 1 < len(self.timelineWidget.keypointsDisplay.sequences):
+                        self.timelineWidget.keypointsDisplay.selectBBox(self.timelineWidget.keypointsDisplay.selected_bbox+1)
+                case Qt.Key.Key_Up:
+                    if self.timelineWidget.keypointsDisplay.selected_bbox > 0:
+                        self.timelineWidget.keypointsDisplay.selectBBox(self.timelineWidget.keypointsDisplay.selected_bbox-1)
+                case Qt.Key.Key_1:
+                    self.timelineWidget.keypointsDisplay.draw_class(0)
+                case Qt.Key.Key_2:
+                    self.timelineWidget.keypointsDisplay.draw_class(1)
+                case Qt.Key.Key_3:
+                    self.timelineWidget.keypointsDisplay.draw_class(2)
+                case Qt.Key.Key_4:
+                    self.timelineWidget.keypointsDisplay.draw_class(3)
+                case Qt.Key.Key_5:
+                    self.timelineWidget.keypointsDisplay.draw_class(4)
+                case Qt.Key.Key_6:
+                    self.timelineWidget.keypointsDisplay.draw_class(5)
+                case Qt.Key.Key_7:
+                    self.timelineWidget.keypointsDisplay.draw_class(6)
+                case Qt.Key.Key_8:
+                    self.timelineWidget.keypointsDisplay.draw_class(7)
+                case Qt.Key.Key_9:
+                    self.timelineWidget.keypointsDisplay.draw_class(8)
+                case Qt.Key.Key_A:
+                    self.timelineWidget.keypointsDisplay.add_new_keypoint()
+                case Qt.Key.Key_Delete:
+                    self.timelineWidget.keypointsDisplay.delete_keypoint()
+                case Qt.Key.Key_Backspace:
+                    self.timelineWidget.keypointsDisplay.delete_sequance()
+                case Qt.Key.Key_N:
+                    self.timelineWidget.keypointsDisplay.add_sequance()
+                # case Qt.Key.Key_0:
+                #     self.timelineWidget.keypointsDisplay.draw_class(0) 
     
     def setFrame(self,frame:int):
         self.timelineWidget.timeline.setValue(frame)
     
-        
+    def make_undo_command(self):
+        self.mUndoStack.push(UndoCommand(self))
 
-        
-        
-        
-
-        
     
+    
+        
+class UndoCommand(QUndoCommand):
+    def __init__(self, parent:MainWindow):
+        super().__init__()
+        self.parent = parent
+        self.prev_seqs = []
+        for sq in parent.sequences:
+            self.prev_seqs.append(sq.copy())
+
+        self.seqs = []
+        for sq in parent.sequences:
+            self.seqs.append(sq.copy())
+
+    def undo(self):
+        self.seqs = []
+        for sq in self.parent.sequences:
+            self.seqs.append(sq.copy())
+
+        self.parent.sequences.clear()
+        for sq in self.prev_seqs:
+            self.parent.sequences.append(sq.copy())
+
+        self.parent.update()
+        self.parent.timelineWidget.labelList.bbox_cnt.set_bboxes_cnt(len(self.prev_seqs))
+        self.parent.imageWidget.repaint()
+        self.parent.timelineWidget.keypointsDisplay.repaint()
+
+    def redo(self):
+        self.parent.sequences.clear()
+        for sq in self.seqs:
+            self.parent.sequences.append(sq.copy())
+
+        self.parent.update()
+        self.parent.timelineWidget.labelList.set_bboxes_cnt(len(self.seqs))
+        self.parent.imageWidget.repaint()
+        self.parent.timelineWidget.keypointsDisplay.repaint()
+    
+    
+        
+        
+        
 
         
