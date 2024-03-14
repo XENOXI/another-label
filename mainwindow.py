@@ -82,7 +82,9 @@ class MainWindow(QMainWindow):
         self.timelineWidget.frameSelected.connect(self.imageWidget.setFrame)
         self.timelineWidget.keypointsDisplay.selectedBboxUpdate.connect(self.imageWidget.selectBBox)
         self.imageWidget.selectedBBoxIdChanged.connect(self.timelineWidget.keypointsDisplay.selectBBox)
-        self.timelineWidget.keypointsDisplay.classUpdate.connect(self.imageWidget.changeClass)
+        self.timelineWidget.keypointsDisplay.imageWidgetRepaint.connect(self.imageWidget.repaint)
+        self.timelineWidget.keypointsDisplay.setFrame.connect(self.setFrame)
+        self.imageWidget.timelineRepaint.connect(self.timelineWidget.keypointsDisplay.repaint)
 
         mainSplitter = QSplitter(Qt.Orientation.Vertical, self)
         mainSplitter.setStretchFactor(0, 1)
@@ -157,9 +159,9 @@ class MainWindow(QMainWindow):
         
         match key:
             case Qt.Key.Key_Right:
-                self.timelineWidget.timeline.setValue(1+self.timelineWidget.timeline.value())
+                self.setFrame(self.timelineWidget.timeline.value()+1)
             case Qt.Key.Key_Left:
-                self.timelineWidget.timeline.setValue(self.timelineWidget.timeline.value()-1)
+                self.setFrame(self.timelineWidget.timeline.value()-1)
             case Qt.Key.Key_Down:
                 if self.timelineWidget.keypointsDisplay.selected_bbox + 1 < len(self.timelineWidget.keypointsDisplay.sequences):
                     self.timelineWidget.keypointsDisplay.selectBBox(self.timelineWidget.keypointsDisplay.selected_bbox+1)
@@ -186,8 +188,14 @@ class MainWindow(QMainWindow):
                 self.timelineWidget.keypointsDisplay.draw_class(8)
             case Qt.Key.Key_A:
                 self.timelineWidget.keypointsDisplay.add_new_keypoint()
+            case Qt.Key.Key_Delete:
+                self.timelineWidget.keypointsDisplay.delete_keypoint()
             # case Qt.Key.Key_0:
             #     self.timelineWidget.keypointsDisplay.draw_class(0) 
+    
+    def setFrame(self,frame:int):
+        self.timelineWidget.timeline.setValue(frame)
+    
         
 
         

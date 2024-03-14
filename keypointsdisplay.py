@@ -7,7 +7,8 @@ import numpy as np
 class KeypointsDisplay(QWidget):
     boxCountUpdated = pyqtSignal(int, int)
     selectedBboxUpdate = pyqtSignal(int)
-    classUpdate = pyqtSignal(int,int,int)
+    imageWidgetRepaint = pyqtSignal()
+    setFrame = pyqtSignal(int)
     def __init__(self):
         super().__init__()
         # SETTINGS
@@ -21,13 +22,14 @@ class KeypointsDisplay(QWidget):
         self.labels = None
         self.frame_cnt = 0
         self.bbox_cnt = 0
-        self.seqs_copy = []
+        self.sequences = []
         self.sequences = []
         self.selectBBox(0)
         self.first_frame_to_render = 0
         self.last_frame_to_render = 0
         self.width_per_box = 0
-        
+  
+        self.select_last_side = True
 
         self.labels_color = [Qt.GlobalColor.magenta,Qt.GlobalColor.blue]
         self.selected_colors = [QColor(180,180,180),QColor(150,150,150),QColor(230,230,230)]
@@ -43,26 +45,34 @@ class KeypointsDisplay(QWidget):
 
         self.last_frame_to_render = self.width_per_box + self.first_frame_to_render
 
-        if self.last_selected_frame >= self.last_frame_to_render:
-            self.last_frame_to_render = self.last_selected_frame+1
-            self.first_frame_to_render = self.last_frame_to_render-self.width_per_box
-        elif self.first_selected_frame < self.first_frame_to_render:
-            self.first_frame_to_render = self.first_selected_frame
-            self.last_frame_to_render = self.first_frame_to_render + self.width_per_box
+        if self.select_last_side:
+            if self.last_selected_frame >= self.last_frame_to_render:
+                self.last_frame_to_render = self.last_selected_frame +  1
+                self.first_frame_to_render = self.last_frame_to_render-self.width_per_box
+            elif self.last_selected_frame < self.first_frame_to_render:
+                self.first_frame_to_render = self.last_selected_frame
+                self.last_frame_to_render = self.first_frame_to_render + self.width_per_box
+        else:
+            if self.first_selected_frame >= self.last_frame_to_render:
+                self.last_frame_to_render = self.first_selected_frame +  1
+                self.first_frame_to_render = self.last_frame_to_render-self.width_per_box
+            elif self.first_selected_frame < self.first_frame_to_render:
+                self.first_frame_to_render = self.first_selected_frame
+                self.last_frame_to_render = self.first_frame_to_render + self.width_per_box
 
         
 
         
 
         for i in range(0,self.width_per_box):
-            painter.drawRect(i*self.frame_box_size, 10, self.frame_box_size, self.frame_box_size*len(self.seqs_copy))
+            painter.drawRect(i*self.frame_box_size, 10, self.frame_box_size, self.frame_box_size*len(self.sequences))
 
         
 
         brush = QBrush(self.selected_colors[0],Qt.BrushStyle.SolidPattern)
         painter.setBrush(brush)
         for i in range(max(self.first_selected_frame,self.first_frame_to_render),self.last_selected_frame+1):
-            painter.drawRect(self.frame_box_size*(i-self.first_frame_to_render), 10, self.frame_box_size, self.frame_box_size*len(self.seqs_copy))
+            painter.drawRect(self.frame_box_size*(i-self.first_frame_to_render), 10, self.frame_box_size, self.frame_box_size*len(self.sequences))
 
         brush = QBrush(self.selected_colors[1],Qt.BrushStyle.SolidPattern)
         painter.setBrush(brush)
@@ -74,7 +84,7 @@ class KeypointsDisplay(QWidget):
         painter.setBrush(brush)
         painter.translate(self.frame_box_size/2,3+self.frame_box_size//2)
         
-        for seq in self.seqs_copy:  
+        for seq in self.sequences:  
             classes = seq["label"].to_numpy()
             frames = seq["frame"].to_numpy()
  
@@ -122,7 +132,7 @@ class KeypointsDisplay(QWidget):
                 
             painter.translate(self.frame_box_size*(self.first_frame_to_render - frames[i]),self.frame_box_size)
 
-        painter.fillRect(self.width_per_box*self.frame_box_size-self.frame_box_size//2 + 1, -len(self.seqs_copy)*self.frame_box_size-3, self.frame_box_size*2, self.frame_box_size*len(self.seqs_copy),self.palette().color(self.backgroundRole()))
+        painter.fillRect(self.width_per_box*self.frame_box_size-self.frame_box_size//2 + 1, -len(self.sequences)*self.frame_box_size-3, self.frame_box_size*2, self.frame_box_size*len(self.sequences),self.palette().color(self.backgroundRole()))
         painter.end()
 
     
@@ -133,10 +143,18 @@ class KeypointsDisplay(QWidget):
             self.last_selected_frame = frame
             self.first_selected_frame = frame
         elif frame>self.last_selected_frame:
+            if not self.select_last_side:
+                self.first_selected_frame = self.last_selected_frame
+                self.select_last_side = True
             self.last_selected_frame = frame
+
         elif frame<self.first_selected_frame:
+            if self.select_last_side:
+                self.last_selected_frame = self.first_selected_frame
+                self.select_last_side = False
             self.first_selected_frame = frame
-        elif self.last_selected_frame-frame < frame - self.first_selected_frame:
+
+        elif self.select_last_side:
             self.last_selected_frame = frame
         else:
             self.first_selected_frame = frame
@@ -149,50 +167,11 @@ class KeypointsDisplay(QWidget):
     def set_sequences(self, sequences: list[pd.DataFrame]):
         self.boxCountUpdated.emit(len(sequences),self.frame_box_size)
         self.sequences = sequences
-        self.seqs_copy = []
-        for i in sequences:
-            self.seqs_copy.append(i.copy())
 
 
-        self.sequences.clear()
-        
-
-        for sq in self.seqs_copy:
-            tab = sq.copy()
-            bf2 = sq.sort_values("frame",ascending=True)
-            i = 0
-
-            while i+1<bf2['frame'].shape[0]:
-                frame1 = bf2['frame'].iloc[i]
-                frame2 = bf2['frame'].iloc[i+1]
-                min_x1,min_x2,max_x1,max_x2 = bf2['x'].iloc[i],bf2['x'].iloc[i+1],bf2['h'].iloc[i],bf2['h'].iloc[i+1]
-                min_y1,min_y2,max_y1,max_y2 = bf2['y'].iloc[i],bf2['y'].iloc[i+1],bf2['w'].iloc[i],bf2['w'].iloc[i+1]
-                for frame in range(frame1+1,frame2):
-                    tab = pd.concat([tab,pd.DataFrame({"frame":[frame],"track_id":[0], "x":[(min_x2-min_x1)*(frame-frame1)/(frame2-frame1) + min_x1], "y":[(min_y2-min_y1)*(frame-frame1)/(frame2-frame1) + min_y1],
-                                                        "h":[(max_x2-max_x1)*(frame-frame1)/(frame2-frame1) + max_x1], "w":[(max_y2-max_y1)*(frame-frame1)/(frame2-frame1) + max_y1],"label":[bf2['label'].iloc[i]]})],ignore_index=True)
-                i+=1
-
-            self.sequences.append(tab.sort_values(by="frame",ascending=True))
 
 
-       
-        
     
-    def update_seq(self,seq_i):       
-        sq = self.seqs_copy[seq_i]
-        tab = sq.copy()
-        for tr in sq['track_id'].unique():
-            i = 0
-            while i+1<sq['frame'].shape[0]:
-                frame1 = sq['frame'].iloc[i]
-                frame2 = sq['frame'].iloc[i+1]
-                min_x1,min_x2,max_x1,max_x2 = sq['x'].iloc[i],sq['x'].iloc[i+1],sq['h'].iloc[i],sq['h'].iloc[i+1]
-                min_y1,min_y2,max_y1,max_y2 = sq['y'].iloc[i],sq['y'].iloc[i+1],sq['w'].iloc[i],sq['w'].iloc[i+1]
-                for frame in range(frame1+1,frame2):
-                    tab.loc[len(tab.index)] = [frame,tr, (min_x2-min_x1)*(frame-frame1)/(frame2-frame1) + min_x1, (min_y2-min_y1)*(frame-frame1)/(frame2-frame1) + min_y1, (max_x2-max_x1)*(frame-frame1)/(frame2-frame1) + max_x1, (max_y2-max_y1)*(frame-frame1)/(frame2-frame1) + max_y1,sq['label'].iloc[i]]
-        self.sequences.pop(seq_i)
-        self.sequences.append(tab)    
-        self.repaint()
 
     def sizeHint(self) -> QSize:
         return QSize(1000,10*self.frame_box_size)
@@ -201,11 +180,22 @@ class KeypointsDisplay(QWidget):
     def mousePressEvent(self, e: QMouseEvent) -> None:
         if e.button() == Qt.MouseButton.LeftButton:
             point = e.pos()
-            if point.y() > 10 and point.y()<10 + self.frame_box_size*len(self.seqs_copy):
-                point.x()//self.frame_box_size
+            if point.y() > 10 and point.y()<10 + self.frame_box_size*len(self.sequences) and point.x()<self.frame_box_size*self.width_per_box:
                 self.selected_bbox = (point.y()-10)//self.frame_box_size   
-                self.selectedBboxUpdate.emit(self.selected_bbox)            
+                self.selectedBboxUpdate.emit(self.selected_bbox)          
+
+                self.mode = "one-select"
+                self.setFrame.emit(point.x()//self.frame_box_size+self.first_frame_to_render)  
                 self.repaint()
+                
+    
+    def mouseMoveEvent(self, a0: QMouseEvent | None) -> None:
+        now_pos = a0.pos()
+        self.mode = "multiselect"
+
+        pos_per_box = now_pos.x()//self.frame_box_size
+        self.setFrame.emit(pos_per_box+self.first_frame_to_render)        
+
     
     def selectBBox(self, bbox_id):
         self.selected_bbox = bbox_id
@@ -215,51 +205,52 @@ class KeypointsDisplay(QWidget):
     def draw_class(self,cls):
         if cls >= len(self.labels_color):
             return
-        frames = self.seqs_copy[self.selected_bbox]["frame"]
-        self.seqs_copy[self.selected_bbox].loc[np.bitwise_and(frames >= self.first_selected_frame, frames <= self.last_selected_frame),"label"] = cls
-        self.sequences[self.selected_bbox].loc[np.bitwise_and(frames >= self.first_selected_frame, frames <= self.last_selected_frame),"label"] = cls
-        self.classUpdate.emit(cls,self.first_selected_frame,self.last_selected_frame)
+        frames = self.sequences[self.selected_bbox]["frame"]
+        self.sequences[self.selected_bbox].loc[np.bitwise_and(frames >= self.first_selected_frame, frames <= self.last_selected_frame),"label"] = cls       
         self.repaint()
         
     
     def add_new_keypoint(self):
+        
         if self.mode != "one-select" and np.any(sq["frame"]==self.last_selected_frame):
             return
         
-        sq = self.seqs_copy.pop(self.selected_bbox)
         
-
+        sq = self.sequences[self.selected_bbox]
+        
+        
         if not sq.shape[0] == 0 and sq["frame"].iloc[0]<self.last_selected_frame<sq["frame"].iloc[sq.shape[0]-1]:
-            sq = pd.concat([sq,self.sequences[self.sequences["frame"] == self.last_selected_frame]],ignore_index=True)
+            
+            i = np.argwhere(sq["frame"]<self.last_selected_frame)[-1,0]
+            frame_before = sq.iloc[i]
+            frame_after = sq.iloc[i+1]
+
+            min_x1,min_x2,max_x1,max_x2 =  sq['x'].iloc[i],sq['x'].iloc[i+1],sq['h'].iloc[i],sq['h'].iloc[i+1]
+            min_y1,min_y2,max_y1,max_y2 = sq['y'].iloc[i],sq['y'].iloc[i+1],sq['w'].iloc[i],sq['w'].iloc[i+1]
+            
+            div = (self.last_selected_frame-int(frame_before["frame"]))/(int(frame_after["frame"]-frame_before["frame"]))
+    
+            buff = pd.DataFrame({"frame":[self.last_selected_frame],"track_id":[0], "x":[(min_x2-min_x1)*div + min_x1], "y":[(min_y2-min_y1)*div + min_y1],
+                                    "h":[(max_x2-max_x1)*div + max_x1], "w":[(max_y2-max_y1)*div + max_y1],"label":[sq['label'].iloc[i]]})
+            
+            buff = pd.concat([sq,buff],ignore_index=True).sort_values("frame",ascending=True)
         else: 
-            sq_orig = self.sequences.pop(self.selected_bbox) 
             if self.last_selected_frame < sq["frame"].iloc[0]:
                 buff = sq[0:1].copy()
-                buff.loc[:,"frame"] = self.last_selected_frame
-                buff2 = pd.concat([buff]*(sq["frame"].iloc[0]-self.last_selected_frame),ignore_index=True)
-
-                buff2.loc[:,"frame"] = np.arange(self.last_selected_frame,sq["frame"].iloc[0],dtype=np.int64)
-
-                buff2 = pd.concat([buff2,sq_orig],ignore_index=True).sort_values("frame",ascending=True)   
-
-                sq = pd.concat([buff,sq],ignore_index=True)
-               
-                
             else:
                 buff = sq[sq.shape[0]-1:sq.shape[0]].copy()
-                buff.loc[:,"frame"] = self.last_selected_frame
-                buff2 = pd.concat([buff]*(self.last_selected_frame-sq["frame"].iloc[sq.shape[0]-1]),ignore_index=True)
-                
-                buff2.loc[:,"frame"] = np.arange(sq["frame"].iloc[sq.shape[0]-1]+1,self.last_selected_frame+1)
-
-                buff2 = pd.concat([sq_orig,buff2],ignore_index=True).sort_values("frame",ascending=True) 
-
-                sq = pd.concat([sq,buff],ignore_index=True)                
+            buff.loc[:,"frame"] = self.last_selected_frame            
+            buff = pd.concat([buff,sq],ignore_index=True)              
                   
-
-            self.sequences.insert(self.selected_bbox,buff2)
-        
-        sq = sq.sort_values("frame",ascending=True)
-        self.seqs_copy.insert(self.selected_bbox,sq)
-     
+        self.sequences[self.selected_bbox] = buff.sort_values("frame",ascending=True)
+        self.imageWidgetRepaint.emit()
         self.repaint()
+
+    def delete_keypoint(self):
+        frames = self.sequences[self.selected_bbox]["frame"]
+        self.sequences[self.selected_bbox] = self.sequences[self.selected_bbox].drop(frames.index[np.bitwise_and(frames >= self.first_selected_frame, frames <= self.last_selected_frame)])
+        self.imageWidgetRepaint.emit()
+        self.repaint()
+
+
+        

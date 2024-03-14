@@ -52,6 +52,7 @@ class ImageWidget(QWidget):
     selectedFrameChanged = pyqtSignal(int)
     selectedBBoxIdChanged = pyqtSignal(int)
     newBBoxCreated = pyqtSignal(int, int, int, int)
+    timelineRepaint = pyqtSignal()
     def __init__(self) -> None:
         super().__init__()
         
@@ -106,8 +107,15 @@ class ImageWidget(QWidget):
             for track_id, seq in enumerate(self.sequences):
                 df = seq[seq['frame'] == self.frame]
                 if len(df) == 0:
-                    continue
-                r = df.iloc[0]
+                    if seq["frame"].iloc[0]>self.frame or self.frame>seq["frame"].iloc[seq.shape[0]-1]:
+                        continue
+                    i = np.argwhere(seq["frame"]<self.frame)[-1,0]
+                    frame_before = seq.iloc[i]
+                    frame_after = seq.iloc[i+1]
+                    div = (self.frame-int(frame_before["frame"]))/(int(frame_after["frame"]-frame_before["frame"]))
+                    r = (frame_after-frame_before)*div + frame_before
+                else:
+                    r = df.iloc[0]
                 bbox = BBox(r)
 
                 if bbox.containsCoords(coords):
@@ -143,9 +151,26 @@ class ImageWidget(QWidget):
 
             selectedBBoxIdData = self.sequences[self.selectedBBoxId]
             datas = selectedBBoxIdData[selectedBBoxIdData['frame'] == self.frame]
-            if len(datas) == 0:
-                return
+            if len(datas) == 0:    
+                if selectedBBoxIdData["frame"].iloc[0]>self.frame or self.frame>selectedBBoxIdData["frame"].iloc[selectedBBoxIdData.shape[0]-1]:
+                    return        
+                i = np.argwhere(selectedBBoxIdData["frame"]<self.frame)[-1,0]
+                frame_before = selectedBBoxIdData.iloc[i]
+                frame_after = selectedBBoxIdData.iloc[i+1]
+
+
+                min_x1,min_x2,max_x1,max_x2 =  selectedBBoxIdData['x'].iloc[i],selectedBBoxIdData['x'].iloc[i+1],selectedBBoxIdData['h'].iloc[i],selectedBBoxIdData['h'].iloc[i+1]
+                min_y1,min_y2,max_y1,max_y2 = selectedBBoxIdData['y'].iloc[i],selectedBBoxIdData['y'].iloc[i+1],selectedBBoxIdData['w'].iloc[i],selectedBBoxIdData['w'].iloc[i+1]
+                
+                div = (self.frame-int(frame_before["frame"]))/(int(frame_after["frame"]-frame_before["frame"]))
+
+                datas = pd.DataFrame({"frame":[self.frame],"track_id":[0], "x":[(min_x2-min_x1)*div + min_x1], "y":[(min_y2-min_y1)*div + min_y1],
+                                    "h":[(max_x2-max_x1)*div + max_x1], "w":[(max_y2-max_y1)*div + max_y1],"label":[selectedBBoxIdData['label'].iloc[i]]})
+                self.sequences[self.selectedBBoxId] = pd.concat([selectedBBoxIdData,datas],ignore_index=True).sort_values("frame",ascending=True)
+                self.timelineRepaint.emit()
+            
             data = datas.iloc[0]
+
             bbox = BBox(data)
 
             last = np.array(self.lastMousePos)
@@ -201,8 +226,15 @@ class ImageWidget(QWidget):
         for track_id, seq in enumerate(self.sequences):
             df = seq[seq['frame'] == self.frame]
             if len(df) == 0:
-                continue
-            r = df.iloc[0]
+                if seq["frame"].iloc[0]>self.frame or self.frame>seq["frame"].iloc[seq.shape[0]-1]:
+                    continue
+                i = np.argwhere(seq["frame"]<self.frame)[-1,0]
+                frame_before = seq.iloc[i]
+                frame_after = seq.iloc[i+1]
+                div = (self.frame-int(frame_before["frame"]))/(int(frame_after["frame"]-frame_before["frame"]))
+                r = (frame_after-frame_before)*div + frame_before
+            else:
+                r = df.iloc[0]
             
             color = (0, 255, 0)
             if r['label'] == 1:
@@ -250,8 +282,5 @@ class ImageWidget(QWidget):
     def selectBBox(self, bbox_id):
         self.selectedBBoxId = bbox_id
         self.repaint()
-    
-    def changeClass(self,cls,first_frame,second_frame):
-        # self.labels.loc[np.bitwise_and(np.bitwise_and(self.labels["track_id"]==self.selectedBBoxId,self.labels["frame"]>=first_frame),self.labels["frame"]<=second_frame),"label"] = cls
-        self.repaint()
+
     
