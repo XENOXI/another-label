@@ -82,6 +82,7 @@ class MainWindow(QMainWindow):
         self.timelineWidget.frameSelected.connect(self.imageWidget.setFrame)
         self.timelineWidget.keypointsDisplay.selectedBboxUpdate.connect(self.imageWidget.selectBBox)
         self.imageWidget.selectedBBoxIdChanged.connect(self.timelineWidget.keypointsDisplay.selectBBox)
+        self.imageWidget.sequencesChanged.connect(self.timelineWidget.labelList.set_bboxes_cnt)
         self.timelineWidget.keypointsDisplay.imageWidgetRepaint.connect(self.imageWidget.repaint)
         self.timelineWidget.keypointsDisplay.setFrame.connect(self.setFrame)
         self.timelineWidget.keypointsDisplay.tableUpdate.connect(self.make_undo_command)
@@ -210,6 +211,11 @@ class MainWindow(QMainWindow):
                 # case Qt.Key.Key_0:
                 #     self.timelineWidget.keypointsDisplay.draw_class(0) 
     
+    def keyReleaseEvent(self, a0: QKeyEvent | None) -> None:
+        if a0.key()==Qt.Key.Key_Shift:
+            self.timelineWidget.keypointsDisplay.mode = "one-select"
+
+
     def setFrame(self,frame:int):
         self.timelineWidget.timeline.setValue(frame)
     

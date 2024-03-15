@@ -42,8 +42,25 @@ class KeypointsDisplay(QWidget):
         painter = QPainter(self)
 
         if len(self.sequences)==0:
-            painter.translate(self.width()//2,30)
-            painter.drawText(0,0,"HEHE")
+            strings =["           _---~~(~~-_.",
+                      "        _{                )      )",
+                      "    ,      )  -~~-  (  ,-'  )_",
+                      "  (        `-,_..`.,    )--    '_,)",
+                      "(  `  _)     (     -~(  -_  `,    }",
+                      "(_-    _    ~_-~~~~`,    ,'  )",
+                      "    `~  -^(             __;-,((()))",
+                      "                ~~~~  {_  -_(())",
+                      "                            `\    }",
+                      "                               {  } ",
+                      "",
+                      "SORRY YOU HAVE NO BRAIN"]
+        
+            painter.translate(self.width()//2-100,30)
+            painter.setPen(Qt.GlobalColor.darkRed)
+            for i in strings:
+
+                painter.drawText(0,0,20*len(i),20,0,i)
+                painter.translate(0,12)
             painter.end()
             return
         

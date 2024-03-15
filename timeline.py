@@ -23,6 +23,7 @@ class TimelineWidget(QWidget):
         keypointsDisplayScroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         keypointsDisplaySplitter = QSplitter(Qt.Orientation.Horizontal, self)
         self.keypointsDisplay = KeypointsDisplay()
+        
 
         keypointsDisplaySplitter.addWidget(self.labelList)
         keypointsDisplaySplitter.addWidget(self.keypointsDisplay)

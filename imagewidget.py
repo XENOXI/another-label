@@ -51,7 +51,7 @@ class BBox:
 class ImageWidget(QWidget):
     selectedFrameChanged = pyqtSignal(int)
     selectedBBoxIdChanged = pyqtSignal(int)
-    newBBoxCreated = pyqtSignal(int, int, int, int)
+    sequencesChanged = pyqtSignal(int)
     timelineRepaint = pyqtSignal()
     tableUpdate = pyqtSignal()
     def __init__(self) -> None:
@@ -136,14 +136,25 @@ class ImageWidget(QWidget):
             self.lastMousePos = None
 
             if self.startBBoxPos:
+                self.tableUpdate.emit()
+
                 coords = self.getCoordsFromMouseEvent(e)
                 x = (self.startBBoxPos[0] + coords[0])//2
                 y = (self.startBBoxPos[1] + coords[1])//2
                 w = abs(self.startBBoxPos[0] - coords[0])
-                h = abs(self.startBBoxPos[1] - coords[1])
-                self.newBBoxCreated.emit(x, y, w, h)
+                h = abs(self.startBBoxPos[1] - coords[1])               
+
+    
+                
+                datas = pd.DataFrame({"frame":[self.frame],"track_id":[0], "x":[x], "y":[y],
+                                    "h":[h], "w":[w],"label":[0]})
+                self.sequences.append(datas)
+                self.selectedBBoxIdChanged.emit(len(self.sequences)-1)
+                self.sequencesChanged.emit(len(self.sequences))
+                self.timelineRepaint.emit()
 
                 self.startBBoxPos = None
+                
     
     def mouseMoveEvent(self, e: QMouseEvent | None) -> None:
         if self.selectedBBoxId is not None and self.lastMousePos is not None:
