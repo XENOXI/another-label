@@ -12,6 +12,7 @@ def detectLabels(videoPath):
     model = YOLO("yolov8m.pt")
     video = cv2.VideoCapture(videoPath)
     framesCount = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
+    fps = int(video.get(cv2.CAP_PROP_FPS))
     print(f"Frames count: {framesCount}")
     progress = QProgressDialog("Tracking", "Cancel", 0, framesCount)
     progress.setWindowModality(Qt.WindowModality.WindowModal)
@@ -55,7 +56,7 @@ def detectLabels(videoPath):
         progress.setValue(framesCount)
     
     video.release()
-    return (framesCount, labelsDict)
+    return (framesCount, fps, labelsDict)
 
 
 class MainWindow(QMainWindow):
@@ -109,7 +110,7 @@ class MainWindow(QMainWindow):
         if videoPath[0] == "":
             return
         
-        framesCount, labelsDict = detectLabels(videoPath[0])
+        framesCount, fps, labelsDict = detectLabels(videoPath[0])
         
         labels = pd.DataFrame(labelsDict)
         for i in labels["track_id"].unique():
@@ -117,7 +118,7 @@ class MainWindow(QMainWindow):
         self.imageWidget.setSequences(self.sequences)
         self.timelineWidget.setSequences(self.sequences)
         self.imageWidget.setVideo(videoPath[0])
-        self.timelineWidget.setFramesCount(framesCount)
+        self.timelineWidget.setFramesProperties(framesCount, fps)
         
         print("done")
 
@@ -130,6 +131,7 @@ class MainWindow(QMainWindow):
         
         video = cv2.VideoCapture(videoPath[0])
         framesCount = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
+        fps = int(video.get(cv2.CAP_PROP_FPS))
         print(f"Frames count: {framesCount}")
         video.release()
 
@@ -139,7 +141,7 @@ class MainWindow(QMainWindow):
         self.imageWidget.setVideo(videoPath[0])
         self.imageWidget.setSequences(self.sequences)
         self.timelineWidget.setSequences(self.sequences)
-        self.timelineWidget.setFramesCount(framesCount)
+        self.timelineWidget.setFramesProperties(framesCount, fps)
 
     def exportLabelsCb(self):
         labels_path = QFileDialog.getSaveFileName(self, "Save csv", None, "*.csv")[0]
