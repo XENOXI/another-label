@@ -20,9 +20,17 @@
 * "Export labels to csv" - Сохраняет файл разметки видео (.csv).
 
 ## Классы и из обозначения
-* Выбранный Bounding box (обозначается бирюзовым цветом) ;
-* normall (обозначается зелёным цветом);
-* unnormal (обозначается синим цветом).
+Выбранный Bounding box (обозначается бирюзовым цветом) ;
+
+<iframe width="560" height="315" src="https://drive.google.com/file/d/1wnF_ccs2jYarTd8nWm1SFiIjpszYmUiC/preview" frameborder="0" allowfullscreen></iframe>
+
+normall (обозначается зелёным цветом);
+
+<iframe width="560" height="315" src="https://drive.google.com/file/d/1H6bvETZkNx51GX1WymjsZ9zV16qqEyEz/preview" frameborder="0" allowfullscreen></iframe>
+
+unnormal (обозначается синим цветом).
+
+<iframe width="560" height="315" src="https://drive.google.com/file/d/1K_tPjC53uQaSPna5FNQ_1is0-bdHOTSV/preview" frameborder="0" allowfullscreen></iframe>
 
 ## Управление
 ### Выбор  Bounding box
