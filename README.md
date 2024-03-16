@@ -22,7 +22,17 @@
 ## Классы и из обозначения
 Выбранный Bounding box (обозначается бирюзовым цветом) ;
 
-<iframe width="560" height="315" src="https://drive.google.com/file/d/1wnF_ccs2jYarTd8nWm1SFiIjpszYmUiC/preview" frameborder="0" allowfullscreen></iframe>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Embedded Video</title>
+</head>
+<body>
+    <iframe width="560" height="315" src="https://drive.google.com/file/d/1wnF_ccs2jYarTd8nWm1SFiIjpszYmUiC/preview" frameborder="0" allowfullscreen></iframe>
+</body>
+</html>
 
 normall (обозначается зелёным цветом);
 
