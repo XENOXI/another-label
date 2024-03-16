@@ -24,13 +24,13 @@
 
 ![](https://drive.google.com/uc?id=1qSwyisrEhTmF9S9u16hdy6RmV-6Dveaj)
 
-*Класс normall (обозначается зелёным цветом);
-
-![](https://drive.google.com/uc?id=1qSwyisrEhTmF9S9u16hdy6RmV-6Dveaj)
-
-*Класс unnormal (обозначается синим цветом).
+* Класс normall (обозначается зелёным цветом);
 
 ![](https://drive.google.com/uc?id=17Ytgip4Qamx49vSdF9_nSFVkJDkogHQZ)
+
+* Класс unnormal (обозначается синим цветом).
+
+![](https://drive.google.com/uc?id=1UydaRCWEFlg7_mgwOoKrNSwc5vuoWMiQ)
 
 ## Управление
 ### Выбор  Bounding box
