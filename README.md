@@ -21,8 +21,7 @@
 
 ## Классы и из обозначения
 Выбранный Bounding box (обозначается бирюзовым цветом) ;
-![](https://drive.google.com/file/d/1wnF_ccs2jYarTd8nWm1SFiIjpszYmUiC/preview)
-
+![](https://drive.google.com/uc?id=1wnF_ccs2jYarTd8nWm1SFiIjpszYmUiC)
 normall (обозначается зелёным цветом);
 
 unnormal (обозначается синим цветом).
