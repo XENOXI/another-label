@@ -22,11 +22,15 @@
 ## Классы и из обозначения
 * Выбранный Bounding box (обозначается бирюзовым цветом) ;
 
-![](https://drive.google.com/uc?id=1wnF_ccs2jYarTd8nWm1SFiIjpszYmUiC)
+![](https://drive.google.com/uc?id=1qSwyisrEhTmF9S9u16hdy6RmV-6Dveaj)
 
-normall (обозначается зелёным цветом);
+*Класс normall (обозначается зелёным цветом);
 
-unnormal (обозначается синим цветом).
+![](https://drive.google.com/uc?id=1qSwyisrEhTmF9S9u16hdy6RmV-6Dveaj)
+
+*Класс unnormal (обозначается синим цветом).
+
+![](https://drive.google.com/uc?id=17Ytgip4Qamx49vSdF9_nSFVkJDkogHQZ)
 
 ## Управление
 ### Выбор  Bounding box
