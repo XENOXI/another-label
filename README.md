@@ -20,7 +20,9 @@
 * "Export labels to csv" - Сохраняет файл разметки видео (.csv).
 
 ## Классы и из обозначения
-![Выбранный Bounding box (обозначается бирюзовым цветом) ;](https://drive.google.com/uc?id=1wnF_ccs2jYarTd8nWm1SFiIjpszYmUiC)
+* Выбранный Bounding box (обозначается бирюзовым цветом) ;
+
+![](https://drive.google.com/uc?id=1wnF_ccs2jYarTd8nWm1SFiIjpszYmUiC)
 
 normall (обозначается зелёным цветом);
 
