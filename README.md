@@ -38,7 +38,7 @@
 
 Пререключение между Bounding boxes осуществляется стрелками вверх/вниз.
 
-![Выделение](https://github.com/XENOXI/another-label/assets/73095626/d6c95bfa-7b75-4a69-9011-b8114db46f48 =250x)
+![Выделение](https://github.com/XENOXI/another-label/assets/73095626/d6c95bfa-7b75-4a69-9011-b8114db46f48.gif =250y)
 
 
 
