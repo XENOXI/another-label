@@ -38,7 +38,8 @@
 
 Пререключение между Bounding boxes осуществляется стрелками вверх/вниз.
 
-![](https://drive.google.com/uc?id=1VMyN0L7TvL-UdnPe0mNX3YsOmWLr0cil)
+![](https://drive.google.com/uc?id=1UydaRCWEFlg7_mgwOoKrNSwc5vuoWMiQ)
+
 
 ### Перемещение по time line
 Перемещение между кадрами осуществляется с помощью ползунка времени и клавишами влево/вправо.
