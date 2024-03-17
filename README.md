@@ -38,7 +38,7 @@
 
 Пререключение между Bounding boxes осуществляется стрелками вверх/вниз.
 
-![](https://drive.google.com/uc?id=1UydaRCWEFlg7_mgwOoKrNSwc5vuoWMiQ)
+![](https://drive.google.com/uc?id=1VMyN0L7TvL-UdnPe0mNX3YsOmWLr0cil)
 
 
 ### Перемещение по time line
