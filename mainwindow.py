@@ -2,7 +2,7 @@ from PyQt6.QtCore import Qt, pyqtSignal,QKeyCombination
 from PyQt6.QtWidgets import QMainWindow, QSlider, QMenu, QSizePolicy, QFileDialog, QProgressDialog,QSplitter, QScrollArea
 from PyQt6.QtGui import QAction, QKeyEvent,QPixmap,QKeySequence,QWheelEvent
 import cv2
-from ultralytics import YOLO
+# from ultralytics import YOLO
 import pandas as pd
 # from numba import njit
 
@@ -10,61 +10,61 @@ from imagewidget import ImageWidget
 from timeline import TimelineWidget
 
 # @njit(nopython=False)
-def detectLabels(videoPath):
-    model = YOLO("yolov8m-pose.pt")
-    video = cv2.VideoCapture(videoPath)
-    framesCount = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
-    print(f"Frames count: {framesCount}")
-    progress = QProgressDialog("Tracking", "Cancel", 0, framesCount)
-    progress.setWindowModality(Qt.WindowModality.WindowModal)
+# def detectLabels(videoPath):
+#     model = YOLO("yolov8m-pose.pt")
+#     video = cv2.VideoCapture(videoPath)
+#     framesCount = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
+#     print(f"Frames count: {framesCount}")
+#     progress = QProgressDialog("Tracking", "Cancel", 0, framesCount)
+#     progress.setWindowModality(Qt.WindowModality.WindowModal)
 
-    labelsDict = {"frame": [], "track_id": [], "x": [], "y": [], "h": [], "w": [], "label": []}
-    for t in range(17):
-        labelsDict['x'+str(t)] = []
-        labelsDict['y'+str(t)] = []
+#     labelsDict = {"frame": [], "track_id": [], "x": [], "y": [], "h": [], "w": [], "label": []}
+#     for t in range(17):
+#         labelsDict['x'+str(t)] = []
+#         labelsDict['y'+str(t)] = []
 
-    for i in range(framesCount):
-        progress.setValue(i)
-        if progress.wasCanceled():
-            break
-        ret, frame = video.read()
-        if not ret:
-            progress.cancel()
-            break
+#     for i in range(framesCount):
+#         progress.setValue(i)
+#         if progress.wasCanceled():
+#             break
+#         ret, frame = video.read()
+#         if not ret:
+#             progress.cancel()
+#             break
         
-        res = model.track(frame, persist=True)
+#         res = model.track(frame, persist=True)
 
-        if res[0].boxes.id is not None:  # Add this check
-            cls = res[0].boxes.cls.int().cpu().tolist()
-            boxes = res[0].boxes.xywh.cpu()
-            track_ids = res[0].boxes.id.int().cpu().tolist()
-            keypoints = res[0].keypoints.xy.cpu().tolist()
-        else:
-            cls = []
-            boxes = []
-            track_ids = []
+#         if res[0].boxes.id is not None:  # Add this check
+#             cls = res[0].boxes.cls.int().cpu().tolist()
+#             boxes = res[0].boxes.xywh.cpu()
+#             track_ids = res[0].boxes.id.int().cpu().tolist()
+#             keypoints = res[0].keypoints.xy.cpu().tolist()
+#         else:
+#             cls = []
+#             boxes = []
+#             track_ids = []
 
-        for box, track_id, cl, keys in zip(boxes, track_ids, cls, keypoints):
-            if cl != 0:
-                continue
+#         for box, track_id, cl, keys in zip(boxes, track_ids, cls, keypoints):
+#             if cl != 0:
+#                 continue
 
-            x, y, w, h = box
+#             x, y, w, h = box
 
-            labelsDict['frame'].append(i)
-            labelsDict['track_id'].append(track_id)
-            labelsDict['x'].append(x.item())
-            labelsDict['y'].append(y.item())
-            labelsDict['w'].append(w.item())
-            labelsDict['h'].append(h.item())
-            labelsDict['label'].append(0)
-            for t in range(17):
-                labelsDict['x'+str(t)].append(int(keys[t][0]))
-                labelsDict['y'+str(t)].append(int(keys[t][1]))
-    else:
-        progress.setValue(framesCount)
+#             labelsDict['frame'].append(i)
+#             labelsDict['track_id'].append(track_id)
+#             labelsDict['x'].append(x.item())
+#             labelsDict['y'].append(y.item())
+#             labelsDict['w'].append(w.item())
+#             labelsDict['h'].append(h.item())
+#             labelsDict['label'].append(0)
+#             for t in range(17):
+#                 labelsDict['x'+str(t)].append(int(keys[t][0]))
+#                 labelsDict['y'+str(t)].append(int(keys[t][1]))
+#     else:
+#         progress.setValue(framesCount)
     
-    video.release()
-    return (framesCount, labelsDict)
+#     video.release()
+#     return (framesCount, labelsDict)
 
 
 class MainWindow(QMainWindow):
@@ -76,15 +76,15 @@ class MainWindow(QMainWindow):
         fileMenu = QMenu("File", self)
         menuBar.addMenu(fileMenu)
 
-        openVideo = QAction("Open video and calculate labels", self)
+        # openVideo = QAction("Open video and calculate labels", self)
         importLabels = QAction("Open video and import labels", self)
         exportLabels = QAction("Export labels to csv", self)
 
-        openVideo.triggered.connect(self.openVideoCB)
+        # openVideo.triggered.connect(self.openVideoCB)
         importLabels.triggered.connect(self.importLabelsCb)
         exportLabels.triggered.connect(self.exportLabelsCb)
 
-        fileMenu.addActions([openVideo, importLabels, exportLabels])
+        fileMenu.addActions([importLabels, exportLabels])
 
         self.imageWidget = ImageWidget()
         self.timelineWidget = TimelineWidget()
@@ -104,22 +104,22 @@ class MainWindow(QMainWindow):
 
         self.sequences = []
 
-    def openVideoCB(self):
-        videoPath = QFileDialog.getOpenFileName(self, "Open video")
-        if videoPath[0] == "":
-            return
+    # def openVideoCB(self):
+    #     videoPath = QFileDialog.getOpenFileName(self, "Open video")
+    #     if videoPath[0] == "":
+    #         return
         
-        framesCount, labelsDict = detectLabels(videoPath[0])
+    #     framesCount, labelsDict = detectLabels(videoPath[0])
         
-        labels = pd.DataFrame(labelsDict)
-        for i in labels["track_id"].unique():
-            self.sequences.append(labels[labels["track_id"]==i].copy().sort_values(by="frame",ascending=True))
-        self.imageWidget.setSequences(self.sequences)
-        self.timelineWidget.setSequences(self.sequences)
-        self.imageWidget.setVideo(videoPath[0])
-        self.timelineWidget.setFramesCount(framesCount)
+    #     labels = pd.DataFrame(labelsDict)
+    #     for i in labels["track_id"].unique():
+    #         self.sequences.append(labels[labels["track_id"]==i].copy().sort_values(by="frame",ascending=True))
+    #     self.imageWidget.setSequences(self.sequences)
+    #     self.timelineWidget.setSequences(self.sequences)
+    #     self.imageWidget.setVideo(videoPath[0])
+    #     self.timelineWidget.setFramesCount(framesCount)
         
-        print("done")
+    #     print("done")
 
     def importLabelsCb(self):
         videoPath = QFileDialog.getOpenFileName(self, "Open video", filter="*.mp4")
