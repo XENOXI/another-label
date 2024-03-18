@@ -6,6 +6,7 @@ import cv2
 import numpy as np
 import pandas as pd
 from pandas import Series
+import psutil
 
 class BBox:
     def __init__(self, row: Series) -> None:
@@ -70,6 +71,12 @@ class ImageWidget(QWidget):
         self.heightOffset = 0
 
         self.aspectRatio = 360/640
+        freeRam = psutil.virtual_memory()[0]/8 #FREE RAM IN BYTES
+        self.maxDataSize = freeRam//4
+        self.ramBuffer = None
+        self.maxImgCnt = 0
+        self.bufferStartFrame = 0
+        self.chunkToLoad = self.maxImgCnt//10
 
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
@@ -83,6 +90,27 @@ class ImageWidget(QWidget):
         self.shape = (height, width)
         self.aspectRatio = height/width
         self.frame = 0
+        
+        self.maxImgCnt = int(self.maxDataSize/(3*width*height))
+        
+        self.ramBuffer = np.empty((self.maxImgCnt,int(height),int(width),3),dtype=np.uint8)
+        for i in range(self.maxImgCnt):
+            _,self.ramBuffer[i] = self.cap.read()
+    
+    def updateBuffer(self):
+        if self.frame >= self.bufferStartFrame and self.frame < self.maxImgCnt + self.bufferStartFrame:
+            return
+        
+        
+        self.cap.set(cv2.CAP_PROP_POS_FRAMES, self.frame-self.maxImgCnt//2) # SET FRAME TO CENTER
+        self.bufferStartFrame = self.frame-self.maxImgCnt//2
+        
+        for i in range(self.maxImgCnt):
+            _,self.ramBuffer[i] = self.cap.read()
+
+        
+
+        
 
     def setFrame(self, frame):
         self.frame = frame
@@ -231,11 +259,10 @@ class ImageWidget(QWidget):
             rect = QRect(0, 0, painter.device().width(), painter.device().height())
             painter.fillRect(rect, brush)
             return
-        self.cap.set(cv2.CAP_PROP_POS_FRAMES, self.frame)
-        ret, image = self.cap.read()
-        if not ret:
-            print("FRAME READ FAILURE")
-            return
+        
+        self.updateBuffer()
+        image = self.ramBuffer[self.frame-self.bufferStartFrame]
+        
         
         for track_id, seq in enumerate(self.sequences):
             df = seq[seq['frame'] == self.frame]
