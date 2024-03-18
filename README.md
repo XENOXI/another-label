@@ -38,12 +38,7 @@
 
 Пререключение между Bounding boxes осуществляется стрелками вверх/вниз.
 
-
-
-https://github.com/XENOXI/another-label/assets/73095626/e26a6587-af65-4fc7-8e5c-4377427f0b15
-
-
-
+![highlighting](https://github.com/XENOXI/another-label/assets/73095626/208c82d0-3843-45be-bf5b-339ba6e518dd)
 
 
 ### Перемещение по time line
