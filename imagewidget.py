@@ -242,7 +242,7 @@ class ImageWidget(QWidget):
             if len(df) == 0:
                 if seq.shape[0]==0 or seq["frame"].iloc[0]>self.frame or self.frame>seq["frame"].iloc[seq.shape[0]-1]:
                     continue
-                i = np.argwhere(seq["frame"]<self.frame)[-1,0]
+                i = np.argwhere((seq["frame"]<self.frame).to_numpy())[-1,0]
                 frame_before = seq.iloc[i]
                 frame_after = seq.iloc[i+1]
                 div = (self.frame-int(frame_before["frame"]))/(int(frame_after["frame"]-frame_before["frame"]))

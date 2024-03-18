@@ -241,7 +241,7 @@ class UndoCommand(QUndoCommand):
             self.parent.sequences.append(sq.copy())
 
         self.parent.update()
-        self.parent.timelineWidget.labelList.bbox_cnt.set_bboxes_cnt(len(self.prev_seqs))
+        self.parent.timelineWidget.labelList.set_bboxes_cnt(len(self.prev_seqs))
         self.parent.imageWidget.repaint()
         self.parent.timelineWidget.keypointsDisplay.repaint()
 

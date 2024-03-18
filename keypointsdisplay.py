@@ -240,7 +240,7 @@ class KeypointsDisplay(QWidget):
         self.repaint()
 
     def draw_class(self,cls):
-        if cls >= len(self.labels_color):
+        if cls >= len(self.labels_color) or len(self.sequences)==0:
             return
         
         self.tableUpdate.emit()
