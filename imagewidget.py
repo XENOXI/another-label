@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 from pandas import Series
 import psutil
+from threading import Thread
 
 class BBox:
     def __init__(self, row: Series) -> None:
@@ -73,10 +74,11 @@ class ImageWidget(QWidget):
         self.aspectRatio = 360/640
         freeRam = psutil.virtual_memory()[0]/8 #FREE RAM IN BYTES
         self.maxDataSize = freeRam//4
-        self.ramBuffer = None
+        self.ramBuffer = [None,None,None]
         self.maxImgCnt = 0
         self.bufferStartFrame = 0
-        self.chunkToLoad = self.maxImgCnt//10
+        self.p = None
+        self.framesCnt = 0
 
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
@@ -87,27 +89,90 @@ class ImageWidget(QWidget):
         self.cap = cv2.VideoCapture(filepath)
         width  = self.cap.get(cv2.CAP_PROP_FRAME_WIDTH)   # float `width`
         height = self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT)  # float `height`
+        self.framesCnt = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))
         self.shape = (height, width)
         self.aspectRatio = height/width
         self.frame = 0
         
-        self.maxImgCnt = int(self.maxDataSize/(3*width*height))
+        self.maxImgCnt = int(self.maxDataSize/(3*3*width*height))
         
-        self.ramBuffer = np.empty((self.maxImgCnt,int(height),int(width),3),dtype=np.uint8)
-        for i in range(self.maxImgCnt):
-            _,self.ramBuffer[i] = self.cap.read()
-    
+        self.ramBuffer = [np.empty((self.maxImgCnt,int(height),int(width),3),dtype=np.uint8) for i in range(3)]
+        for j in range(2):
+            for i in range(self.maxImgCnt):
+                if not self.cap.isOpened():
+                    return
+                _,self.ramBuffer[j+1][i] = self.cap.read()
+
+    @staticmethod
+    def loadBuffer(data,frameId,framesCnt):
+        ramBuffer = data["buffer"]
+
+        if frameId < 0:
+            data["video"].set(cv2.CAP_PROP_POS_FRAMES,0)
+            for i in range(ramBuffer.shape[0] + frameId):
+                _,ramBuffer[i] = data["video"].read()
+        
+        elif frameId + ramBuffer.shape[0] >= framesCnt:
+            if frameId >= framesCnt:
+                return
+            data["video"].set(cv2.CAP_PROP_POS_FRAMES,frameId)
+            for i in range(frameId + ramBuffer.shape[0] - framesCnt):
+                if not data["video"].isOpened():
+                    break
+                _,ramBuffer[i] = data["video"].read()
+        
+        else:     
+            data["video"].set(cv2.CAP_PROP_POS_FRAMES,frameId)
+            for i in range(ramBuffer.shape[0]):
+                _,ramBuffer[i] = data["video"].read()
+            
+
     def updateBuffer(self):
         if self.frame >= self.bufferStartFrame and self.frame < self.maxImgCnt + self.bufferStartFrame:
             return
-        
-        
-        self.cap.set(cv2.CAP_PROP_POS_FRAMES, self.frame-self.maxImgCnt//2) # SET FRAME TO CENTER
-        self.bufferStartFrame = self.frame-self.maxImgCnt//2
-        
-        for i in range(self.maxImgCnt):
-            _,self.ramBuffer[i] = self.cap.read()
+        if self.p:
+            self.p.join()
 
+        data = {"video":self.cap}
+
+        if self.frame >= self.maxImgCnt*2 + self.bufferStartFrame or self.frame < self.bufferStartFrame-self.maxImgCnt:
+            frame = self.frame-self.maxImgCnt*3//2
+            real_frame = max(frame+self.maxImgCnt,0)
+            self.bufferStartFrame = real_frame
+            
+            for i in range(3):
+                data["buffer"] = self.ramBuffer[i]
+                self.loadBuffer(data,frame+self.maxImgCnt*i,self.framesCnt)
+            return       
+        
+
+        if self.frame < self.bufferStartFrame:
+            if self.bufferStartFrame - self.maxImgCnt < 0:
+                self.bufferStartFrame = 0
+                for i in range(1,3):
+                    data["buffer"] = self.ramBuffer[i]
+                    self.loadBuffer(data,self.maxImgCnt*(i-1),self.framesCnt)
+                return
+            
+            self.ramBuffer[1],self.ramBuffer[2],self.ramBuffer[0] = self.ramBuffer[0],self.ramBuffer[1],self.ramBuffer[2]
+            self.bufferStartFrame -= self.maxImgCnt
+            
+            if self.bufferStartFrame == 0:
+                return
+            data["video"] = self.cap
+            data["buffer"] = self.ramBuffer[0]
+            self.p = Thread(target=self.loadBuffer,args = (data,self.bufferStartFrame-self.maxImgCnt,self.framesCnt))
+        else:
+            self.ramBuffer[0],self.ramBuffer[1],self.ramBuffer[2] = self.ramBuffer[1],self.ramBuffer[2],self.ramBuffer[0]
+            self.bufferStartFrame += self.maxImgCnt
+            
+
+            if self.bufferStartFrame + self.maxImgCnt >= self.framesCnt:
+                return
+            data["video"] = self.cap
+            data["buffer"] = self.ramBuffer[2]
+            self.p = Thread(target=self.loadBuffer,args = (data,self.bufferStartFrame+self.maxImgCnt,self.framesCnt))
+        self.p.start()
         
 
         
@@ -261,7 +326,7 @@ class ImageWidget(QWidget):
             return
         
         self.updateBuffer()
-        image = self.ramBuffer[self.frame-self.bufferStartFrame]
+        image = self.ramBuffer[1][self.frame-self.bufferStartFrame]
         
         
         for track_id, seq in enumerate(self.sequences):

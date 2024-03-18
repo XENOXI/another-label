@@ -82,6 +82,8 @@ class TimelineWidget(QWidget):
         self.timeLabel.setText(f"{hours}:{minutes%60:02}:{seconds%60:02}")
     
     def currentFrameEditChanged(self, frame_str):
+        if frame_str == '':
+            return
         self.timeline.setValue(int(frame_str))
     
 
