@@ -14,5 +14,5 @@ if ($freeSpace -lt 5GB) {
 # Установка необходимых библиотек
 python -m pip install requests numpy pandas
 
-python -m pip install torch torchvision
+python -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
 python -m pip install ultralytics
