@@ -1,6 +1,6 @@
 from PyQt6.QtCore import QSize,QRect,Qt,QPoint, pyqtSignal
 from PyQt6.QtGui import QPaintEvent, QPainter,QColor,QBrush,QShortcut,QKeyEvent,QLinearGradient,QMouseEvent
-from PyQt6.QtWidgets import QWidget, QSizePolicy
+from PyQt6.QtWidgets import QWidget, QSizePolicy, QApplication
 import pandas as pd
 import numpy as np
 
@@ -171,6 +171,11 @@ class KeypointsDisplay(QWidget):
 
 
     def set_frame(self,frame):
+        if Qt.KeyboardModifier.ShiftModifier == QApplication.keyboardModifiers():
+            self.mode = 'multiselect'
+        else:
+            self.mode = 'one-select'
+
         if self.mode == "one-select":
             self.last_selected_frame = frame
             self.first_selected_frame = frame
@@ -235,7 +240,7 @@ class KeypointsDisplay(QWidget):
         self.repaint()
 
     def draw_class(self,cls):
-        if cls >= len(self.labels_color):
+        if cls >= len(self.labels_color) or len(self.sequences)==0:
             return
         
         self.tableUpdate.emit()
@@ -245,7 +250,11 @@ class KeypointsDisplay(QWidget):
         self.repaint()
         
     
-    def add_new_keypoint(self): 
+    def add_new_keypoint(self):
+        if Qt.KeyboardModifier.ShiftModifier == QApplication.keyboardModifiers():
+            self.mode = 'multiselect'
+        else:
+            self.mode = 'one-select'
         if self.mode != "one-select" and np.any(sq["frame"]==self.last_selected_frame):
             return
         

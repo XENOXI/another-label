@@ -3,7 +3,7 @@ from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QIntValidator
 
 from keypointsdisplay import KeypointsDisplay
-from labellist import LabelList
+from sequenceidlist import SequenceIdList
 
 
 class TimelineWidget(QWidget):
@@ -20,7 +20,7 @@ class TimelineWidget(QWidget):
         self.framesCount = 0
         self.fps = 0
 
-        self.labelList = LabelList()
+        self.labelList = SequenceIdList()
         keypointsDisplayScroll = QScrollArea(self)
         keypointsDisplayScroll.setWidgetResizable(True)
         keypointsDisplayScroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
@@ -73,6 +73,8 @@ class TimelineWidget(QWidget):
         self.currentFrameEdit.setText(str(frame))
         self.currentFrameEdit.blockSignals(False)
 
+        if self.fps == 0:
+            return
         seconds = round(frame/self.fps)
         minutes = seconds//60
         hours = seconds//3600
@@ -80,6 +82,8 @@ class TimelineWidget(QWidget):
         self.timeLabel.setText(f"{hours}:{minutes%60:02}:{seconds%60:02}")
     
     def currentFrameEditChanged(self, frame_str):
+        if frame_str == '':
+            return
         self.timeline.setValue(int(frame_str))
     
 

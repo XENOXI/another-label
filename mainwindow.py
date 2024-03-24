@@ -1,6 +1,6 @@
-from PyQt6.QtCore import Qt, pyqtSignal,QKeyCombination
-from PyQt6.QtWidgets import QMainWindow, QSlider, QMenu, QSizePolicy, QFileDialog, QProgressDialog,QSplitter, QScrollArea
-from PyQt6.QtGui import QAction, QKeyEvent,QPixmap,QKeySequence,QWheelEvent,QUndoStack,QUndoCommand
+from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import QMainWindow, QMenu, QSizePolicy, QFileDialog, QProgressDialog,QSplitter, QApplication
+from PyQt6.QtGui import QAction, QKeyEvent,QShortcut,QKeySequence,QWheelEvent,QUndoStack,QUndoCommand
 import cv2
 from ultralytics import YOLO
 import pandas as pd
@@ -63,7 +63,6 @@ class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle("Labeler")
-        self.grabKeyboard()
         menuBar = self.menuBar()
         fileMenu = QMenu("File", self)
         menuBar.addMenu(fileMenu)
@@ -93,6 +92,44 @@ class MainWindow(QMainWindow):
         self.mUndoStack = QUndoStack(self)
         self.mUndoStack.setUndoLimit(10)
 
+        self.undoShortcut = QShortcut(QKeySequence("Ctrl+Z"), self)
+        self.undoShortcut.activated.connect(self.mUndoStack.undo)
+
+        self.redoShortcut = QShortcut(QKeySequence("Ctrl+Y"), self)
+        self.redoShortcut.activated.connect(self.mUndoStack.redo)
+
+        self.deleteShortcut = QShortcut(QKeySequence("Del"), self)
+        self.deleteShortcut.activated.connect(self.timelineWidget.keypointsDisplay.delete_keypoint)
+
+        self.deleteSequenceShortcut = QShortcut(QKeySequence("Backspace"), self)
+        self.deleteSequenceShortcut.activated.connect(self.timelineWidget.keypointsDisplay.delete_sequance)
+
+        self.newSequenceShortcut = QShortcut(QKeySequence("N"), self)
+        self.newSequenceShortcut.activated.connect(self.timelineWidget.keypointsDisplay.add_sequance)
+
+        self.newKeypointShortcut = QShortcut(QKeySequence('A'), self)
+        self.newKeypointShortcut.activated.connect(self.timelineWidget.keypointsDisplay.add_new_keypoint)
+
+        self.selectDownSequenceShortcut = QShortcut(QKeySequence("Down"), self)
+        self.selectDownSequenceShortcut.activated.connect(self.selectDownSequence)
+
+        self.selectUpSequenceShortcut = QShortcut(QKeySequence("Up"), self)
+        self.selectUpSequenceShortcut.activated.connect(self.selectUpSequence)
+
+        self.selectNextFrameShortcut = QShortcut(QKeySequence("Right"), self)
+        self.selectNextFrameShiftedShortcut = QShortcut(QKeySequence("Shift+Right"), self)
+        self.selectNextFrameShortcut.activated.connect(self.selectNextFrame)
+        self.selectNextFrameShiftedShortcut.activated.connect(self.selectNextFrame)
+
+        self.selectPrevFrameShortcut = QShortcut(QKeySequence("Left"), self)
+        self.selectPrevFrameShiftedShortcut = QShortcut(QKeySequence("Shift+Left"), self)
+        self.selectPrevFrameShortcut.activated.connect(self.selectPrevFrame)
+        self.selectPrevFrameShiftedShortcut.activated.connect(self.selectPrevFrame)
+
+        for i in range(9):
+            digitShortcut = QShortcut(QKeySequence(f"{i+1}"), self)
+            digitShortcut.activated.connect(lambda self = self,i=i: self.timelineWidget.keypointsDisplay.draw_class(i))
+
 
         mainSplitter = QSplitter(Qt.Orientation.Vertical, self)
         mainSplitter.setStretchFactor(0, 1)
@@ -104,6 +141,21 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(mainSplitter)
 
         self.sequences = []
+
+    def selectDownSequence(self):
+        if self.timelineWidget.keypointsDisplay.selected_bbox + 1 < len(self.timelineWidget.keypointsDisplay.sequences):
+            self.timelineWidget.keypointsDisplay.selectBBox(self.timelineWidget.keypointsDisplay.selected_bbox+1)
+    
+    def selectUpSequence(self):
+        if self.timelineWidget.keypointsDisplay.selected_bbox > 0:
+            self.timelineWidget.keypointsDisplay.selectBBox(self.timelineWidget.keypointsDisplay.selected_bbox-1)
+    
+    def selectNextFrame(self):
+        self.setFrame(self.timelineWidget.timeline.value()+1)
+    
+    def selectPrevFrame(self):
+        self.setFrame(self.timelineWidget.timeline.value()-1)
+
 
     def openVideoCB(self):
         videoPath = QFileDialog.getOpenFileName(self, "Open video")
@@ -157,67 +209,6 @@ class MainWindow(QMainWindow):
 
         event.accept()
 
-        
-    def keyPressEvent(self, e: QKeyEvent | None) -> None:
-        key,modifier = e.key(),e.modifiers()
-    
-        if modifier == Qt.KeyboardModifier.ShiftModifier or key==Qt.Key.Key_Shift:
-            self.timelineWidget.keypointsDisplay.mode = "multiselect"
-        else:
-            self.timelineWidget.keypointsDisplay.mode = "one-select"
-        
-        if modifier == Qt.KeyboardModifier.ControlModifier:
-            match key:
-                case Qt.Key.Key_Z:
-                    self.mUndoStack.undo()
-                case Qt.Key.Key_Y:
-                    self.mUndoStack.redo()
-        else:
-            match key:
-                case Qt.Key.Key_Right:
-                    self.setFrame(self.timelineWidget.timeline.value()+1)
-                case Qt.Key.Key_Left:
-                    self.setFrame(self.timelineWidget.timeline.value()-1)
-                case Qt.Key.Key_Down:
-                    if self.timelineWidget.keypointsDisplay.selected_bbox + 1 < len(self.timelineWidget.keypointsDisplay.sequences):
-                        self.timelineWidget.keypointsDisplay.selectBBox(self.timelineWidget.keypointsDisplay.selected_bbox+1)
-                case Qt.Key.Key_Up:
-                    if self.timelineWidget.keypointsDisplay.selected_bbox > 0:
-                        self.timelineWidget.keypointsDisplay.selectBBox(self.timelineWidget.keypointsDisplay.selected_bbox-1)
-                case Qt.Key.Key_1:
-                    self.timelineWidget.keypointsDisplay.draw_class(0)
-                case Qt.Key.Key_2:
-                    self.timelineWidget.keypointsDisplay.draw_class(1)
-                case Qt.Key.Key_3:
-                    self.timelineWidget.keypointsDisplay.draw_class(2)
-                case Qt.Key.Key_4:
-                    self.timelineWidget.keypointsDisplay.draw_class(3)
-                case Qt.Key.Key_5:
-                    self.timelineWidget.keypointsDisplay.draw_class(4)
-                case Qt.Key.Key_6:
-                    self.timelineWidget.keypointsDisplay.draw_class(5)
-                case Qt.Key.Key_7:
-                    self.timelineWidget.keypointsDisplay.draw_class(6)
-                case Qt.Key.Key_8:
-                    self.timelineWidget.keypointsDisplay.draw_class(7)
-                case Qt.Key.Key_9:
-                    self.timelineWidget.keypointsDisplay.draw_class(8)
-                case Qt.Key.Key_A:
-                    self.timelineWidget.keypointsDisplay.add_new_keypoint()
-                case Qt.Key.Key_Delete:
-                    self.timelineWidget.keypointsDisplay.delete_keypoint()
-                case Qt.Key.Key_Backspace:
-                    self.timelineWidget.keypointsDisplay.delete_sequance()
-                case Qt.Key.Key_N:
-                    self.timelineWidget.keypointsDisplay.add_sequance()
-                # case Qt.Key.Key_0:
-                #     self.timelineWidget.keypointsDisplay.draw_class(0) 
-    
-    def keyReleaseEvent(self, a0: QKeyEvent | None) -> None:
-        if a0.key()==Qt.Key.Key_Shift:
-            self.timelineWidget.keypointsDisplay.mode = "one-select"
-
-
     def setFrame(self,frame:int):
         self.timelineWidget.timeline.setValue(frame)
     
@@ -240,6 +231,7 @@ class UndoCommand(QUndoCommand):
             self.seqs.append(sq.copy())
 
     def undo(self):
+        print("hello")
         self.seqs = []
         for sq in self.parent.sequences:
             self.seqs.append(sq.copy())
@@ -249,7 +241,7 @@ class UndoCommand(QUndoCommand):
             self.parent.sequences.append(sq.copy())
 
         self.parent.update()
-        self.parent.timelineWidget.labelList.bbox_cnt.set_bboxes_cnt(len(self.prev_seqs))
+        self.parent.timelineWidget.labelList.set_bboxes_cnt(len(self.prev_seqs))
         self.parent.imageWidget.repaint()
         self.parent.timelineWidget.keypointsDisplay.repaint()
 
