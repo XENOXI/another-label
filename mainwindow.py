@@ -12,7 +12,7 @@ def detectLabels(videoPath):
     model = YOLO("yolov8m.pt")
     video = cv2.VideoCapture(videoPath)
     framesCount = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
-    fps = int(video.get(cv2.CAP_PROP_FPS))
+    fps = video.get(cv2.CAP_PROP_FPS)
     print(f"Frames count: {framesCount}")
     progress = QProgressDialog("Tracking", "Cancel", 0, framesCount)
     progress.setWindowModality(Qt.WindowModality.WindowModal)
@@ -131,7 +131,7 @@ class MainWindow(QMainWindow):
         
         video = cv2.VideoCapture(videoPath[0])
         framesCount = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
-        fps = int(video.get(cv2.CAP_PROP_FPS))
+        fps = video.get(cv2.CAP_PROP_FPS)
         print(f"Frames count: {framesCount}")
         video.release()
 

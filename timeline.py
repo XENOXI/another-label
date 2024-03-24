@@ -73,7 +73,7 @@ class TimelineWidget(QWidget):
         self.currentFrameEdit.setText(str(frame))
         self.currentFrameEdit.blockSignals(False)
 
-        seconds = frame//self.fps
+        seconds = round(frame/self.fps)
         minutes = seconds//60
         hours = seconds//3600
 
