@@ -38,7 +38,7 @@ class KeypointsDisplay(QWidget):
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
 
-    def paintEvent(self, a0: QPaintEvent | None) -> None:
+    def paintEvent(self, a0) -> None:
         painter = QPainter(self)
 
         if len(self.sequences)==0:
@@ -201,7 +201,7 @@ class KeypointsDisplay(QWidget):
         self.frame_cnt = frame_cnt
         self.repaint()
     
-    def set_sequences(self, sequences: list[pd.DataFrame]):
+    def set_sequences(self, sequences):
         self.boxCountUpdated.emit(len(sequences),self.frame_box_size)
         self.sequences = sequences
 
@@ -214,7 +214,7 @@ class KeypointsDisplay(QWidget):
         return QSize(1000,10*self.frame_box_size)
     
     
-    def mousePressEvent(self, e: QMouseEvent) -> None:
+    def mousePressEvent(self, e) -> None:
         if e.button() == Qt.MouseButton.LeftButton:
             point = e.pos()
             if point.y() > 10 and point.y()<10 + self.frame_box_size*len(self.sequences) and point.x()<self.frame_box_size*self.width_per_box:
@@ -226,7 +226,7 @@ class KeypointsDisplay(QWidget):
                 self.repaint()
                 
     
-    def mouseMoveEvent(self, a0: QMouseEvent | None) -> None:
+    def mouseMoveEvent(self, a0) -> None:
         now_pos = a0.pos()
         self.mode = "multiselect"
 

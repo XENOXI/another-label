@@ -9,7 +9,7 @@ from imagewidget import ImageWidget
 from timeline import TimelineWidget
 
 def detectLabels(videoPath):
-    model = YOLO("yolov8m.pt")
+    model = YOLO("yolov8l-pose.pt")
     video = cv2.VideoCapture(videoPath)
     framesCount = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
     fps = video.get(cv2.CAP_PROP_FPS)
@@ -18,6 +18,10 @@ def detectLabels(videoPath):
     progress.setWindowModality(Qt.WindowModality.WindowModal)
 
     labelsDict = {"frame": [], "track_id": [], "x": [], "y": [], "h": [], "w": [], "label": []}
+    for j in range(17):
+        labelsDict[f"kp{j}x"] = []
+        labelsDict[f'kp{j}y']= []
+        labelsDict[f'conf{j}']=[]
 
     for i in range(framesCount):
         progress.setValue(i)
@@ -34,12 +38,16 @@ def detectLabels(videoPath):
             cls = res[0].boxes.cls.int().cpu().tolist()
             boxes = res[0].boxes.xywh.cpu()
             track_ids = res[0].boxes.id.int().cpu().tolist()
+            keypoints = res[0].keypoints.xy.cpu().tolist()
+            confs = res[0].keypoints.conf.cpu().tolist()
         else:
             cls = []
             boxes = []
             track_ids = []
+            keypoints = []
+            confs = []
 
-        for cl, box, track_id in zip(cls, boxes, track_ids):
+        for cl, box, track_id, kp, conf in zip(cls, boxes, track_ids, keypoints, confs):
             if cl != 0:
                 continue
 
@@ -52,6 +60,10 @@ def detectLabels(videoPath):
             labelsDict['w'].append(w.item())
             labelsDict['h'].append(h.item())
             labelsDict['label'].append(0)
+            for j in range(17):
+                labelsDict[f"kp{j}x"].append(kp[j][0])
+                labelsDict[f'kp{j}y'].append(kp[j][1])
+                labelsDict[f'conf{j}'].append(conf[j])
     else:
         progress.setValue(framesCount)
     

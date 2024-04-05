@@ -95,7 +95,7 @@ class ImageWidget(QWidget):
         self.frame = 0
         
         self.maxImgCnt = int(self.maxDataSize/(3*3*width*height))
-        
+        print(self.maxImgCnt)
         self.ramBuffer = [np.empty((self.maxImgCnt,int(height),int(width),3),dtype=np.uint8) for i in range(3)]
         for j in range(2):
             for i in range(self.maxImgCnt):
@@ -222,7 +222,7 @@ class ImageWidget(QWidget):
             self.repaint()
             
 
-    def mouseReleaseEvent(self, e: QMouseEvent | None) -> None:
+    def mouseReleaseEvent(self, e) -> None:
         self.setCursor(Qt.CursorShape.ArrowCursor)
         self.selectedCorner = None
         if e.button() == Qt.MouseButton.LeftButton:
@@ -249,7 +249,7 @@ class ImageWidget(QWidget):
                 self.startBBoxPos = None
                 
     
-    def mouseMoveEvent(self, e: QMouseEvent | None) -> None:
+    def mouseMoveEvent(self, e) -> None:
         if self.selectedBBoxId is not None and self.lastMousePos is not None:
             lastX, lastY = self.lastMousePos
             x, y = self.getCoordsFromMouseEvent(e)
@@ -314,7 +314,7 @@ class ImageWidget(QWidget):
 
             
     
-    def paintEvent(self, a0: QPaintEvent | None) -> None:
+    def paintEvent(self, a0) -> None:
         painter = QPainter(self)
         
         if not self.cap:

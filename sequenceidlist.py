@@ -11,7 +11,7 @@ class SequenceIdList(QWidget):
         self.selected_color = QColor(200,200,200)
         
 
-    def paintEvent(self, a0: QPaintEvent | None) -> None:
+    def paintEvent(self, a0) -> None:
         painter = QPainter(self)
         
         painter.fillRect(0,self.frame_box_size//2+self.selected_bbox*self.frame_box_size,25,self.frame_box_size,self.selected_color)
