@@ -50,6 +50,11 @@ class BBox:
         rb = self.rb_corner()
         return lt[0] <= coords[0] <= rb[0] and lt[1] <= coords[1] <= rb[1]
     
+    def drawPoints(self,image):
+        for i in range(17):
+            cv2.circle(image,np.array([self.r[f"kp{i}x"],self.r[f"kp{i}y"]],dtype=int),2,(200,100,255),-1)
+        return image
+    
 class ImageWidget(QWidget):
     selectedFrameChanged = pyqtSignal(int)
     selectedBBoxIdChanged = pyqtSignal(int)
@@ -359,6 +364,7 @@ class ImageWidget(QWidget):
 
             bbox = BBox(r)
             image = cv2.rectangle(image, bbox.lt_corner(), bbox.rb_corner(), color, 2)
+            image = bbox.drawPoints(image)
 
         if self.startBBoxPos:
             # print(self.startBBoxPos, self.lastMousePos)

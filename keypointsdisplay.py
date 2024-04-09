@@ -319,5 +319,11 @@ class KeypointsDisplay(QWidget):
         self.boxCountUpdated.emit(len(self.sequences),self.frame_box_size)
         self.repaint()
 
+    def select_all(self):
+        self.mode = 'multiselect'
+        self.first_selected_frame = self.sequences[self.selected_bbox]["frame"].iloc[0]
+        self.last_selected_frame = self.sequences[self.selected_bbox]["frame"].iloc[-1]
+        self.repaint()
+
 
         
