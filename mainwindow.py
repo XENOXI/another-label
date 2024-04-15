@@ -9,7 +9,7 @@ from imagewidget import ImageWidget
 from timeline import TimelineWidget
 
 def detectLabels(videoPath):
-    model = YOLO("yolov8l-pose.pt")
+    model = YOLO("yolov8x-pose-p6.pt")
     video = cv2.VideoCapture(videoPath)
     framesCount = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
     fps = video.get(cv2.CAP_PROP_FPS)
